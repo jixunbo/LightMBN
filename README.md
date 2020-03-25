@@ -29,6 +29,7 @@ Inplemented networks:
 - MGN [[link]](https://arxiv.org/abs/1804.01438)
 - Bag of tricks [[link]](http://openaccess.thecvf.com/content_CVPRW_2019/papers/TRMTMCT/Luo_Bag_of_Tricks_and_a_Strong_Baseline_for_Deep_Person_CVPRW_2019_paper.pdf)
 - OSNet [[link]](https://arxiv.org/abs/1905.00953)
+- Batch Drop Block for Person ReID [[link]](https://arxiv.org/abs/1811.07130)
 
 
 ## Getting Started
