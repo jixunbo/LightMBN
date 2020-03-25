@@ -85,7 +85,7 @@ If you have pretrained model and config file, run
 
 
 
-If you want to resume training process, we assume you have the checkpoint file 'model.pth.tar-latest', run
+If you want to resume training process, we assume you have the checkpoint file 'model-latest.pth', run
 
 `python [path to repo]/main.py --config [path to repo]/mpmc_config.yaml --load [path to checkpoint]`
 
@@ -102,7 +102,7 @@ The whole training process(120 epochs) takes ~9 hours.
 
 If you are hard-core player ^ ^ and you'd like to try different models or options, see Get Started as follows.
 
-###Results
+### Results
 | Model | Market1501 | DukeMTMC-reID |
 | --- | -- | -- |
 | MPMC_n | 95.6 (90.2) |  91.4 (82.3) |
