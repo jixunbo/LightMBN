@@ -125,7 +125,7 @@ class MCMP_r(nn.Module):
 
         p0 = p_par[:, :, 0:1, :]
         p1 = p_par[:, :, 1:2, :]
-        print(glo.shape)
+        # print(glo.shape)
         f_glo = self.reduction_0(glo)
         f_p0 = self.reduction_1(g_par)
         f_p1 = self.reduction_2(p0)
@@ -135,7 +135,7 @@ class MCMP_r(nn.Module):
 
         c0 = cha[:, :self.chs, :, :]
         c1 = cha[:, self.chs:, :, :]
-        print(c0.shape)
+        # print(c0.shape)
         c0 = self.shared(c0)
         c1 = self.shared(c1)
         f_c0 = self.reduction_ch_0(c0)

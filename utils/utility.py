@@ -28,6 +28,13 @@ class checkpoint():
             if args.save == '':
                 args.save = now
             self.dir = ROOT_PATH + '/experiment/' + args.save
+
+            # Only works if using google drive
+            if ROOT_PATH[:8]=='/content':
+                self.model_save_dir = osp.join(ROOT_PATH,'..','..','experiment'+args.save)
+            else:
+                self.model_save_dir = 'none'
+        
         else:
             self.dir = ROOT_PATH + '/experiment/' + args.load
             if not os.path.exists(self.dir):
