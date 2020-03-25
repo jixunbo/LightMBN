@@ -30,7 +30,7 @@ class Engine():
         self.ckpt.write_log(
             '[INFO] Starting from epoch {}'.format(self.scheduler.last_epoch))
 
-        print(ckpt.log)
+        # print(ckpt.log)
         # print(self.scheduler._last_lr)
 
     def train(self):

@@ -20,6 +20,26 @@ torch_ver = torch.__version__[:3]
 __all__ = ['PAM_Module', 'CAM_Module', 'Dual_Module', 'SE_Module']
 
 
+class SE_Module(Module):
+
+    def __init__(self, channels, reduction=4):
+        super(SE_Module, self).__init__()
+        self.fc1 = Conv2d(channels, channels // reduction,
+                          kernel_size=1, padding=0)
+        self.relu = ReLU(inplace=True)
+        self.fc2 = Conv2d(channels // reduction, channels,
+                          kernel_size=1, padding=0)
+        self.sigmoid = Sigmoid()
+
+    def forward(self, x):
+        module_input = x
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+        x = self.sigmoid(x)
+        return module_input * x
+
+
 class PAM_Module(Module):
     """ Position attention module"""
     # Ref from SAGAN
@@ -109,21 +129,3 @@ class Dual_Module(Module):
         return out1 + out2
 
 
-class SE_Module(Module):
-
-    def __init__(self, channels, reduction=4):
-        super(SE_Module, self).__init__()
-        self.fc1 = Conv2d(channels, channels // reduction,
-                          kernel_size=1, padding=0)
-        self.relu = ReLU(inplace=True)
-        self.fc2 = Conv2d(channels // reduction, channels,
-                          kernel_size=1, padding=0)
-        self.sigmoid = Sigmoid()
-
-    def forward(self, x):
-        module_input = x
-        x = self.fc1(x)
-        x = self.relu(x)
-        x = self.fc2(x)
-        x = self.sigmoid(x)
-        return module_input * x

@@ -171,13 +171,13 @@ class checkpoint():
             state['state_dict'] = new_state_dict
         # save
         # fpath = osp.join(save_dir, 'model.pth.tar-' + str(epoch))
-        fpath = osp.join(save_dir, 'model.pth.tar-latest')
+        fpath = osp.join(save_dir, 'model-latest.pth')
         torch.save(state, fpath)
         self.write_log('[INFO] Checkpoint saved to "{}"'.format(fpath))
         if is_best:
             # shutil.copy(fpath, osp.join(osp.dirname(fpath), 'model-best.pth.tar'))
             torch.save(state['state_dict'], osp.join(
-                save_dir, 'model-best.pth.tar'))
+                save_dir, 'model-best.pth'))
         if 'log' in state.keys():
 
             torch.save(state['log'], os.path.join(save_dir, 'map_log.pt'))

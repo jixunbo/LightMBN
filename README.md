@@ -31,7 +31,7 @@ Inplemented networks:
 - OSNet [[link]](https://arxiv.org/abs/1905.00953)
 
 
-## Get Started
+## Getting Started
 The designed architecture is concise and easy explicable, where the file engine.py defines the train/ test process and main.py controls the overall epochs, and the folders model, loss, optimizer including respective parts of neural network.
 
 The user-friendly command-line module argparse helps us indicate different datasets, networks, loss functions, and tricks as we need, 
@@ -39,7 +39,7 @@ the detailed options/configurations are described in the bottom of this page.
 
 If you don't have any dataset yet, run `git clone https://github.com/jixunbo/ReIDataset.git` to download Market-1501, DukeMTMC, and MOT17.
 
-To inplement Multi-Parts Multi-Channels Network, run
+To inplement Multi-Parts Multi-Channels Network with Multi-Similarity loss, run
 `python [path to repo]/main.py --datadir [path to datasets] --data_train DukeMTMC --data_test DukeMTMC --model MCMP_n --batchid 8 --batchimage 8 --batchtest 32 --test_every 10 --epochs 120 --save '' --decay_type step_50_80_110 --loss 0.5*CrossEntropy+0.5*MSLoss --margin 0.75 --nGPU 1 --lr 3.5e-4 --optimizer ADAM --random_erasing --warmup 'constant' --if_labelsmooth --feats 512`
 
 Also, using pre-defined config file
@@ -79,6 +79,12 @@ If you have pretrained model and config file, run
 
 `python [path to repo]/main.py --test_only --config [path to repo]/mpmc_config.yaml --pre_train [path to pretrained model]` to see the performance of the model.
 
+
+
+[here](https://drive.google.com/open?id=1dIsI0b9kgytd02tl5cPLMBON7eHlyIA5) is the MPMC **pre-trained model** and config file.
+
+
+
 If you want to resume training process, we assume you have the checkpoint file 'model.pth.tar-latest', run
 
 `python [path to repo]/main.py --config [path to repo]/mpmc_config.yaml --load [path to checkpoint]`
@@ -87,12 +93,27 @@ Of course, you can also set options individually using argparse command-line wit
 
 ## Easy Inplementation
 Our code can be inplemented easily without install any package or requirement thanks to Google Colab, all the packages we need are Colab standard pre-installed packages.
+
 Open this [notebook](https://colab.research.google.com/drive/14aRebdOqJSfNlwXiI5USOQBgweckUwLS), following the steps there and you can see the training process and results.
+
 Please be sure that your are using Google's powerful GPU(Tesla P100 or T4).
+
 The whole training process(120 epochs) takes ~9 hours.
 
 If you are hard-core player ^ ^ and you'd like to try different models or options, see Get Started as follows.
 
+###Results
+| Model | Market1501 | DukeMTMC-reID |
+| --- | -- | -- |
+| MPMC_n | 95.6 (90.2) |  91.4 (82.3) |
+| MPMC_r | 95.4 (88.9) |  89.3 (79.2) |
+| BoT | 94.2 (85.4) |  86.7 (75.8) |
+| PCB | 95.1 (86.3) |  87.6 (76.6) |
+| MGN | 94.7 (87.5) | 88.7 (79.4) |
+
+Note, Rank-1(mAP), the results are produced by our repo without re-ranking, models and configurations may differ from original paper.
+
+Additionally, the evaluation metric method is the same as bag of tricks [repo](https://github.com/michuanhaohao/reid-strong-baseline/blob/master/utils/reid_metric.py).
 
 ### Option Description
 '--nThread': type=int, default=4, number of threads for data loading.
@@ -104,7 +125,7 @@ If you are hard-core player ^ ^ and you'd like to try different models or option
 ''--config', type=str, default="", config path,if you have config file,use to set options, you don't need to input any option again.
 
  '--datadir', type=str, is the dataset root, which contains folder Market-1501, DukeMTMC-ReID etw..
- 
+
 '--data_train' and '--data_test', type=str, specify the name of train/test dataset, which we can train on one dataset but test on another dataset, supported options: Market1501, DukeMTMC, MOT17, CUHK03.
 
 '--batchid 6' and '--batchimage 8': type=int, indicate that each batch contrains 6 persons, each person has 8 different images, totally 48 images.
@@ -124,6 +145,7 @@ If you are hard-core player ^ ^ and you'd like to try different models or option
 '--epochs', type=int, is the epochs we'd like to train, while '--test_every 10' means evaluation will be excuted in every 10 epochs, the parameters of network and optimizer are updated after every every evaluation. 
 
 '--model', default='MGN', name of model, options: MPMC_n, MPMC_r,  ResNet50, PCB, MGN.
+
 '--loss', type=str, default='0.5\*CrossEntropy+0.5\*Triplet', you can combine different loss functions and corresponding weights, you can use only one loss function or 2 and more functions, e.g. '1\*CrossEntropy', '0.5\*CrossEntropy+0.5\*MSLoss+0.0005\*CenterLoss', options: CrossEntropy, Triplet, MSLoss, CenterLoss, Focal, GroupLoss.
 
 '--margin', type=float, margin for Triplet and MSLoss.
@@ -172,5 +194,5 @@ If you are hard-core player ^ ^ and you'd like to try different models or option
 
 '--num_anchors', type=int, default=1, number of iterations of computing group loss.
 
-
-
+### Acknowledgments
+The codes are expanded from [deep-person-reid](https://github.com/KaiyangZhou/deep-person-reid) and [MGN-pytorch](https://github.com/seathiefwang/MGN-pytorch).

@@ -128,12 +128,12 @@ class MCMP_n(nn.Module):
         self.reduction_ch_0 = BNNeck(args.feats, args.num_classes, return_f=True)
         self.reduction_ch_1 = BNNeck(args.feats, args.num_classes, return_f=True)
 
-        if args.drop_block:
-            print('Using batch random erasing block.')
-            self.batch_drop_block = BatchRandomErasing()
         # if args.drop_block:
-        #     print('Using batch drop block.')
-        #     self.batch_drop_block = BatchDrop(h_ratio=0.33, w_ratio=1)
+        #     print('Using batch random erasing block.')
+        #     self.batch_drop_block = BatchRandomErasing()
+        if args.drop_block:
+            print('Using batch drop block.')
+            self.batch_drop_block = BatchDrop(h_ratio=0.33, w_ratio=1)
         else:
             self.batch_drop_block = None
 
@@ -218,7 +218,7 @@ if __name__ == '__main__':
     parser.add_argument('--w_ratio', type=float, default=1.0, help='')
 
     args = parser.parse_args()
-    net = MCMP_cam_2_m(args)
+    net = MCMP_n(args)
     # net.classifier = nn.Sequential()
     # print([p for p in net.parameters()])
     # a=filter(lambda p: p.requires_grad, net.parameters())

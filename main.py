@@ -31,7 +31,7 @@ loss = loss.make_loss(args, ckpt) if not args.test_only else None
 start = -1
 if args.load != '':
     start = ckpt.resume_from_checkpoint(
-        osp.join(ckpt.dir, 'model.pth.tar-latest'), model, optimzer) - 1
+        osp.join(ckpt.dir, 'model-latest.pth'), model, optimzer) - 1
 if args.pre_train != '':
     ckpt.load_pretrained_weights(model, args.pre_train)
 

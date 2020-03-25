@@ -29,10 +29,10 @@ class LossFunction():
             weight, loss_type = loss.split('*')
             if loss_type == 'CrossEntropy':
                 if args.if_labelsmooth:
-                    print(args.num_classes)
+                    # print(args.num_classes)
                     loss_function = CrossEntropyLabelSmooth(
                         num_classes=args.num_classes)
-                    print('Label smooth on')
+                    # print('Label smooth on')
                 else:
                     loss_function = nn.CrossEntropyLoss()
             elif loss_type == 'Triplet':
