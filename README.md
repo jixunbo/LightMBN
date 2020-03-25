@@ -93,7 +93,7 @@ If you want to resume training process, we assume you have the checkpoint file '
 Of course, you can also set options individually using argparse command-line without config file.
 
 ## Easy Inplementation
-Our code can be inplemented easily without install any package or requirement thanks to Google Colab, all the packages we need are Colab standard pre-installed packages.
+Our code can be inplemented easily online without install any package or requirement even GPU in your own computer thanks to Google Colab, all the packages we need are Colab standard pre-installed packages.
 
 Open this [notebook](https://colab.research.google.com/drive/14aRebdOqJSfNlwXiI5USOQBgweckUwLS), following the steps there and you can see the training process and results.
 
