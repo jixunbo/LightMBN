@@ -177,15 +177,8 @@ class MCMP_n(nn.Module):
         fea = [f_glo[-1], f_p0[-1]]
 
         if not self.training:
-            a1 = F.normalize(f_glo[0], p=2, dim=1)
-            a2 = F.normalize(f_p0[0], p=2, dim=1)
-            a3 = F.normalize(f_p1[0], p=2, dim=1)
-            a4 = F.normalize(f_p2[0], p=2, dim=1)
 
-            a5 = F.normalize(f_c0[0], p=2, dim=1)
-            a6 = F.normalize(f_c1[0], p=2, dim=1)
-
-            return torch.cat([a1, a2, a3, a4, a5, a6], 1)
+            return torch.stack([f_glo[0],f_p0[0],f_p1[0],f_p2[0],f_c0[0],f_c1[0]],dim=2)
 
         return [f_glo[1], f_p0[1], f_p1[1], f_p2[1], f_c0[1], f_c1[1]], fea
 
