@@ -28,7 +28,7 @@ class Engine():
             self.ckpt.write_log('[INFO] GPU: ' + torch.cuda.get_device_name(0))
 
         self.ckpt.write_log(
-            '[INFO] Starting from epoch {}'.format(self.scheduler.last_epoch))
+            '[INFO] Starting from epoch {}'.format(self.scheduler.last_epoch + 1))
 
         # print(ckpt.log)
         # print(self.scheduler._last_lr)
@@ -53,6 +53,7 @@ class Engine():
 
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
+
             loss = self.loss.compute(outputs, labels)
 
             loss.backward()
@@ -95,10 +96,10 @@ class Engine():
             dist = 1 - torch.mm(qf, gf.t()).cpu().numpy()
 
             # m, n = qf.shape[0], gf.shape[0]
-
             # dist = torch.pow(qf, 2).sum(dim=1, keepdim=True).expand(m, n) + \
-            #     torch.pow(gf, 2).sum(dim=1, keepdim=True).expand(n, m).t()
+            #           torch.pow(gf, 2).sum(dim=1, keepdim=True).expand(n, m).t()
             # dist.addmm_(1, -2, qf, gf.t())
+            # dist = dist.cpu().numpy()
             # dist = np.dot(qf,np.transpose(gf))
         # print('2')
 
@@ -162,24 +163,24 @@ class Engine():
             input_img = inputs.to(self.device)
             outputs = self.model(input_img)
             # print(outputs.shape)
-            if args.feat_inference == 'after':
+            # if args.feat_inference == 'after':
 
-                f1 = outputs.data.cpu()
-                # flip
-                inputs = inputs.index_select(
-                    3, torch.arange(inputs.size(3) - 1, -1, -1))
-                input_img = inputs.to(self.device)
-                outputs = self.model(input_img)
-                f2 = outputs.data.cpu()
+            f1 = outputs.data.cpu()
+            # flip
+            inputs = inputs.index_select(
+                3, torch.arange(inputs.size(3) - 1, -1, -1))
+            input_img = inputs.to(self.device)
+            outputs = self.model(input_img)
+            f2 = outputs.data.cpu()
 
-            else:
-                f1 = outputs[-1].data.cpu()
-                # flip
-                inputs = inputs.index_select(
-                    3, torch.arange(inputs.size(3) - 1, -1, -1))
-                input_img = inputs.to(self.device)
-                outputs = self.model(input_img)
-                f2 = outputs[-1].data.cpu()
+            # else:
+            #     f1 = outputs[-1].data.cpu()
+            #     # flip
+            #     inputs = inputs.index_select(
+            #         3, torch.arange(inputs.size(3) - 1, -1, -1))
+            #     input_img = inputs.to(self.device)
+            #     outputs = self.model(input_img)
+            #     f2 = outputs[-1].data.cpu()
 
             ff = f1 + f2
             if ff.dim() == 3:

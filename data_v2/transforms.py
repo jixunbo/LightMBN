@@ -40,7 +40,9 @@ class Random2DTranslation(object):
             return img.resize((self.width, self.height), self.interpolation)
 
         new_width, new_height = int(
-            round(self.width * 1.125)), int(round(self.height * 1.125))
+            # round(self.width * 1.125)), int(round(self.height * 1.125))
+            round(self.width * 1.05)), int(round(self.height * 1.05))
+
         resized_img = img.resize((new_width, new_height), self.interpolation)
         x_maxrange = new_width - self.width
         y_maxrange = new_height - self.height
@@ -283,7 +285,7 @@ def build_transforms(height, width, transforms='random_flip', norm_mean=[0.485, 
         transform_tr += [RandomHorizontalFlip()]
     if 'random_crop' in transforms:
         print('+ random crop (enlarge to {}x{} and '
-              'crop {}x{})'.format(int(round(height * 1.125)), int(round(width * 1.125)), height, width))
+              'crop {}x{})'.format(int(round(height * 1.05)), int(round(width * 1.05)), height, width))
         transform_tr += [Random2DTranslation(height, width)]
     if 'random_patch' in transforms:
         print('+ random patch')

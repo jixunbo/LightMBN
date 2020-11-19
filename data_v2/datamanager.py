@@ -126,7 +126,7 @@ class ImageDataManager(DataManager):
         targets = args.data_test.lower()
         height = args.height
         width = args.width
-        transforms = ['random_flip']
+        transforms = ['random_flip', 'random_crop']
         norm_mean = [0.485, 0.456, 0.406]
         norm_std = [0.229, 0.224, 0.225]
         use_gpu = not args.cpu
@@ -137,10 +137,9 @@ class ImageDataManager(DataManager):
         batch_size_test = args.batchtest
         workers = args.nThread
         train_sampler = 'random'
-        cuhk03_labeled = False
+        cuhk03_labeled = True
         cuhk03_classic_split = False
         market1501_500k = False
-        transforms = ['random_flip']
 
         if args.random_erasing:
             transforms.append('random_erase')
@@ -253,7 +252,11 @@ class ImageDataManager(DataManager):
         print('  # train images   : {}'.format(len(trainset)))
         print('  # train cameras  : {}'.format(self.num_train_cams))
         print('  test             : {}'.format(self.targets))
+        print('  # query images   : {}'.format(len(queryset)))
+        print('  # gallery images : {}'.format(len(galleryset)))
+
         print('  *****************************************')
+
         print('\n')
 
 
