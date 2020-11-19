@@ -2,7 +2,7 @@ import torch.optim as optim
 import torch.optim.lr_scheduler as lrs
 from .n_adam import NAdam
 from .warmup_scheduler import WarmupMultiStepLR
-from .GradualWarmupScheduler import GradualWarmupScheduler
+from .warmup_cosine_scheduler import WarmupCosineAnnealingLR
 
 
 def make_optimizer(args, model):
@@ -101,17 +101,17 @@ def make_scheduler(args, optimizer, last_epoch):
         scheduler = lrs.CosineAnnealingLR(
             optimizer, float(args.epochs), last_epoch=last_epoch
         )
+
+        return scheduler
+
     if args.w_cosine_annealing:
 
-        scheduler = GradualWarmupScheduler(
+        scheduler = WarmupCosineAnnealingLR(
             optimizer, multiplier=1, warmup_epoch=10, epochs=args.epochs, last_epoch=last_epoch)
+        return scheduler
 
-    else:
-
-        scheduler = WarmupMultiStepLR(
-            optimizer, milestones, args.gamma, 0.01, 10, args.warmup, last_epoch=last_epoch)
-
-    return scheduler
+    scheduler = WarmupMultiStepLR(
+        optimizer, milestones, args.gamma, 0.01, 10, args.warmup, last_epoch=last_epoch)
 
     if args.decay_type == 'step':
         scheduler = lrs.StepLR(

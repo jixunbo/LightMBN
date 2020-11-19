@@ -41,7 +41,7 @@ the detailed options/configurations are described in the bottom of this page.
 If you don't have any dataset yet, run `git clone https://github.com/jixunbo/ReIDataset.git` to download Market-1501, DukeMTMC, and MOT17.
 
 To inplement Multi-Parts Multi-Channels Network with Multi-Similarity loss, run
-`python [path to repo]/main.py --datadir [path to datasets] --data_train DukeMTMC --data_test DukeMTMC --model MCMP_n --batchid 8 --batchimage 8 --batchtest 32 --test_every 10 --epochs 120 --save '' --decay_type step_50_80_110 --loss 0.5*CrossEntropy+0.5*MSLoss --margin 0.75 --nGPU 1 --lr 3.5e-4 --optimizer ADAM --random_erasing --warmup 'constant' --if_labelsmooth --feats 512`
+`python [path to repo]/main.py --datadir [path to datasets] --data_train DukeMTMC --data_test DukeMTMC --model MCMP_n --batchid 8 --batchimage 8 --batchtest 32 --test_every 10 --epochs 120 --save '' --decay_type step_50_80_110 --loss 0.5*CrossEntropy+0.5*MSLoss --margin 0.75 --nGPU 1 --lr 3.5e-4 --optimizer ADAM --random_erasing --w_cosine_annealing --if_labelsmooth --feats 512`
 
 Also, using pre-defined config file
 `python [path to repo]/main.py --config [path to repo]/mcmp_config.yaml --save ''`
@@ -60,7 +60,7 @@ Actually, for the MCMP model we have two kinds of backbone, MCMP_r we use ResNet
 
 If you would like to re-inplement Bag of Tricks, run
 
-`python [path to repo]/main.py --datadir [path to datasets] --data_train Market1501 --data_test Market1501 --model ResNet50 --batchid 16 --batchimage 4 --batchtest 32 --test_every 10 --epochs 120 --save '' --decay_type step_40_70 --loss 0.5*CrossEntropy+0.5*Triplet --margin 0.3 --nGPU 1 --lr 3.5e-4 --optimizer ADAM --random_erasing --warmup 'linear' --if_labelsmooth`
+`python [path to repo]/main.py --datadir [path to datasets] --data_train Market1501 --data_test Market1501 --model ResNet50 --batchid 16 --batchimage 4 --batchtest 32 --test_every 10 --epochs 120 --save '' --decay_type step_40_70 --loss 0.5*CrossEntropy+0.5*Triplet --margin 0.3 --nGPU 1 --lr 3.5e-4 --optimizer ADAM --random_erasing --warmup 'constant' --if_labelsmooth`
 
 or 
 

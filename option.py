@@ -56,7 +56,7 @@ parser.add_argument('--gamma', type=float, default=0.1, help='learning rate deca
 parser.add_argument('--weight_decay', type=float, default=5e-4, help='weight decay')
 parser.add_argument('--decay_type', type=str, default='step', help='learning rate decay type')
 parser.add_argument('--lr_decay', type=int, default=60, help='learning rate decay per N epochs')
-parser.add_argument('--warmup', type=str, default='none', help='warmup iteration, option: linear, constant, none')
+parser.add_argument('--warmup', type=str, default='constant', help='warmup iteration, option: linear, constant')
 parser.add_argument('--pcb_different_lr', type=str,default='True', help='use different lr in pcb optimizer')
 parser.add_argument("--cosine_annealing", action='store_true', help='if raise, cosine_annealing')
 parser.add_argument("--w_cosine_annealing", action='store_true', help='if raise, warmup cosine_annealing')
