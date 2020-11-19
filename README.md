@@ -106,8 +106,8 @@ If you are hard-core player ^ ^ and you'd like to try different models or option
 ### Results
 | Model | Market1501 | DukeMTMC-reID |
 | --- | -- | -- |
-| MPMC_n | 95.7 (90.2) |  91.4 (82.3) |
-| MPMC_r | 95.4 (89.0) |  90.5 (80.4) |
+| MPMC_n | 96.3 (90.9) |  91.3 (82.6) |
+| MPMC_r | 95.6 (90.1) |  90.2 (81.5) |
 | BoT | 94.2 (85.4) |  86.7 (75.8) |
 | PCB | 95.1 (86.3) |  87.6 (76.6) |
 | MGN | 94.7 (87.5) | 88.7 (79.4) |
