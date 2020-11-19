@@ -28,12 +28,11 @@ class BatchDrop(nn.Module):
         return x
 
 
-
 # Define the ResNet50-based Model
 class ResNet50(nn.Module):
 
     # def __init__(self, class_num, droprate=0.5, stride=2):
-    def __init__(self, args, droprate=0.5, stride=2):
+    def __init__(self, args, droprate=0.5, stride=1):
 
         super(ResNet50, self).__init__()
         resnet = resnet50(pretrained=True)
@@ -45,18 +44,31 @@ class ResNet50(nn.Module):
         self.model = resnet
         self.bnneck = args.bnneck
         self.drop_block = args.drop_block
+
+        if args.feat_inference == 'before':
+            self.before_neck = True
+            print('Using before_neck inference')
+        else:
+            self.before_neck = False
         if args.drop_block:
             print('Using batch drop block.')
             resnet.avgpool = nn.AdaptiveMaxPool2d((1, 1))
-            self.batch_drop_block = BatchDrop(h_ratio=args.h_ratio, w_ratio=args.w_ratio)
+            self.batch_drop_block = BatchDrop(
+                h_ratio=args.h_ratio, w_ratio=args.w_ratio)
         if self.bnneck:
-            self.classifier = BNNeck(2048, args.num_classes, return_f=True)
+            self.classifier = BNNeck(2048, args.num_classes,  # feat_dim=512,
+                                     return_f=True)
+            # self.classifier = BNNeck3(2048, args.num_classes, feat_dim=512,
+            #  return_f=True)
             # self.classifier = new_BNNeck(2048, args.num_classes, 256, return_f=True)
+            # print(args.num_classes)
 
         else:
 
+            # self.classifier = ClassBlock(
+            #     2048, args.num_classes,relu=True, return_f=True)
             self.classifier = ClassBlock(
-                2048, args.num_classes, droprate, return_f=True)
+                2048, args.num_classes, num_bottleneck=args.feats, return_f=True)
 
     def forward(self, x):
         x = self.model.conv1(x)
@@ -67,6 +79,7 @@ class ResNet50(nn.Module):
         x = self.model.layer2(x)
         x = self.model.layer3(x)
         x = self.model.layer4(x)
+        # print(x.size())
         if self.drop_block:
             x = self.batch_drop_block(x)
         x = self.model.avgpool(x)
@@ -77,12 +90,15 @@ class ResNet50(nn.Module):
         # print(x[1].shape)
         # print(x[2].shape)
 
-
-
         if not self.training:
+            if self.before_neck:
+                return x[-1]
             return x[0]
+        # print(x[1].size())
+        # print(x[-1].size())
+        return [x[1], x[-1]]
 
-        return x[1],x[-1]
+
 if __name__ == '__main__':
     # Here I left a simple forward function.
     # Test the model, before you train it.
@@ -97,13 +113,12 @@ if __name__ == '__main__':
     parser.add_argument('--w_ratio', type=float, default=1.0, help='')
     parser.add_argument('--h_ratio', type=float, default=0.33, help='')
 
-
     args = parser.parse_args()
     net = ResNet50(args)
     # net.classifier = nn.Sequential()
     # print([p for p in net.parameters()])
     # a=filter(lambda p: p.requires_grad, net.parameters())
-    # print(a) 
+    # print(a)
 
     print(net)
     input = Variable(torch.FloatTensor(8, 3, 384, 128))
@@ -115,4 +130,3 @@ if __name__ == '__main__':
     # for k in output[0]:
     #     print(k.shape)
     # for k in output[1]:
-

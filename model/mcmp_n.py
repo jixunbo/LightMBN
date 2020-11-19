@@ -5,7 +5,7 @@ from torch import nn
 import torch.nn.functional as F
 import random
 import math
-from .osnet import osnet_x1_0, OSBlock
+from .osnet import osnet_x1_0, osnet_x0_5, OSBlock
 from .attention import PAM_Module, CAM_Module, SE_Module, Dual_Module
 from .bnneck import BNNeck, BNNeck3
 
@@ -43,7 +43,6 @@ class BatchRandomErasing(nn.Module):
 
     def forward(self, img):
         if self.training:
-            # print(img.size(),'lllllll')
             if random.uniform(0, 1) > self.probability:
                 return img
 
@@ -61,11 +60,11 @@ class BatchRandomErasing(nn.Module):
                     x1 = random.randint(0, img.size()[2] - h)
                     y1 = random.randint(0, img.size()[3] - w)
                     if img.size()[1] == 3:
-                        img[:,0, x1:x1 + h, y1:y1 + w] = self.mean[0]
-                        img[:,1, x1:x1 + h, y1:y1 + w] = self.mean[1]
-                        img[:,2, x1:x1 + h, y1:y1 + w] = self.mean[2]
+                        img[:, 0, x1:x1 + h, y1:y1 + w] = self.mean[0]
+                        img[:, 1, x1:x1 + h, y1:y1 + w] = self.mean[1]
+                        img[:, 2, x1:x1 + h, y1:y1 + w] = self.mean[2]
                     else:
-                        img[:,0, x1:x1 + h, y1:y1 + w] = self.mean[0]
+                        img[:, 0, x1:x1 + h, y1:y1 + w] = self.mean[0]
                     return img
 
         return img
@@ -79,13 +78,14 @@ class MCMP_n(nn.Module):
         self.chs = 512 // self.n_ch
 
         osnet = osnet_x1_0(pretrained=True)
-        attention = CAM_Module(256)
+        # attention = CAM_Module(256)
+        # attention = SE_Module(256)
 
         self.backone = nn.Sequential(
             osnet.conv1,
             osnet.maxpool,
             osnet.conv2,
-            attention,
+            # attention,
             osnet.conv3[0]
         )
 
@@ -125,8 +125,10 @@ class MCMP_n(nn.Module):
             self.chs, args.feats, 1, bias=False), nn.BatchNorm2d(args.feats), nn.ReLU(True))
         self.weights_init_kaiming(self.shared)
 
-        self.reduction_ch_0 = BNNeck(args.feats, args.num_classes, return_f=True)
-        self.reduction_ch_1 = BNNeck(args.feats, args.num_classes, return_f=True)
+        self.reduction_ch_0 = BNNeck(
+            args.feats, args.num_classes, return_f=True)
+        self.reduction_ch_1 = BNNeck(
+            args.feats, args.num_classes, return_f=True)
 
         # if args.drop_block:
         #     print('Using batch random erasing block.')
@@ -137,6 +139,8 @@ class MCMP_n(nn.Module):
         else:
             self.batch_drop_block = None
 
+        self.activation_map = args.activation_map
+
     def forward(self, x):
         # if self.batch_drop_block is not None:
         #     x = self.batch_drop_block(x)
@@ -146,6 +150,18 @@ class MCMP_n(nn.Module):
         glo = self.global_branch(x)
         par = self.partial_branch(x)
         cha = self.channel_branch(x)
+
+        if self.activation_map:
+
+            _, _, h_par, _ = par.size()
+
+            fmap_p0 = par[:, :, :h_par // 2, :]
+            fmap_p1 = par[:, :, h_par // 2:, :]
+            fmap_c0 = cha[:, :self.chs, :, :]
+            fmap_c1 = cha[:, self.chs:, :, :]
+            print('activation_map')
+
+            return glo, fmap_c0, fmap_c1, fmap_p0, fmap_p1
 
         if self.batch_drop_block is not None:
             glo = self.batch_drop_block(glo)
@@ -178,7 +194,7 @@ class MCMP_n(nn.Module):
 
         if not self.training:
 
-            return torch.stack([f_glo[0],f_p0[0],f_p1[0],f_p2[0],f_c0[0],f_c1[0]],dim=2)
+            return torch.stack([f_glo[0], f_p0[0], f_p1[0], f_p2[0], f_c0[0], f_c1[0]], dim=2)
 
         return [f_glo[1], f_p0[1], f_p1[1], f_p2[1], f_c0[1], f_c1[1]], fea
 

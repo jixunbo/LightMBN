@@ -2,6 +2,7 @@ import torch.optim as optim
 import torch.optim.lr_scheduler as lrs
 from .n_adam import NAdam
 from .warmup_scheduler import WarmupMultiStepLR
+from .GradualWarmupScheduler import GradualWarmupScheduler
 
 
 def make_optimizer(args, model):
@@ -26,7 +27,7 @@ def make_optimizer(args, model):
         base_params = filter(lambda p: id(
             p) not in ignored_params, model.model.parameters())
 
-        if args.pcb_different_lr:
+        if args.pcb_different_lr == 'True':
             print('PCB different lr')
             if args.optimizer == 'SGD':
                 optimizer_pcb = optim.SGD([
@@ -96,9 +97,20 @@ def make_scheduler(args, optimizer, last_epoch):
     milestones = args.decay_type.split('_')
     milestones.pop(0)
     milestones = list(map(lambda x: int(x), milestones))
+    if args.cosine_annealing:
+        scheduler = lrs.CosineAnnealingLR(
+            optimizer, float(args.epochs), last_epoch=last_epoch
+        )
+    if args.w_cosine_annealing:
 
-    scheduler = WarmupMultiStepLR(
-        optimizer, milestones, args.gamma, 0.01, 10, args.warmup, last_epoch=last_epoch)
+        scheduler = GradualWarmupScheduler(
+            optimizer, multiplier=1, warmup_epoch=10, epochs=args.epochs, last_epoch=last_epoch)
+
+    else:
+
+        scheduler = WarmupMultiStepLR(
+            optimizer, milestones, args.gamma, 0.01, 10, args.warmup, last_epoch=last_epoch)
+
     return scheduler
 
     if args.decay_type == 'step':

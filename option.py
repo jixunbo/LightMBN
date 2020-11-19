@@ -35,7 +35,7 @@ parser.add_argument("--h_ratio", type=float, default=0.33, help='w_ratio of batc
 
 parser.add_argument('--act', type=str, default='relu', help='activation function')
 parser.add_argument('--pool', type=str, default='avg', help='pool function')
-parser.add_argument('--feats', type=int, default=256, help='number of feature maps')
+parser.add_argument('--feats', type=int, default=512, help='number of feature maps')
 parser.add_argument('--height', type=int, default=384, help='height of the input image')
 parser.add_argument('--width', type=int, default=128, help='width of the input image')
 parser.add_argument('--num_classes', type=int, default=751, help='')
@@ -58,6 +58,9 @@ parser.add_argument('--decay_type', type=str, default='step', help='learning rat
 parser.add_argument('--lr_decay', type=int, default=60, help='learning rate decay per N epochs')
 parser.add_argument('--warmup', type=str, default='none', help='warmup iteration, option: linear, constant, none')
 parser.add_argument('--pcb_different_lr', type=str,default='True', help='use different lr in pcb optimizer')
+parser.add_argument("--cosine_annealing", action='store_true', help='if raise, cosine_annealing')
+parser.add_argument("--w_cosine_annealing", action='store_true', help='if raise, warmup cosine_annealing')
+
 
 parser.add_argument('--parts', type=int, default=6, help='parts of PCB model')
 parser.add_argument("--margin", type=float, default=1.2, help='')
@@ -74,6 +77,7 @@ parser.add_argument("--probability", type=float, default=0.5, help='')
 parser.add_argument('--save', type=str, default='test', help='file name to save')
 parser.add_argument('--load', type=str, default='', help='file name to load')
 parser.add_argument('--pre_train', type=str, default='', help='pre-trained model directory')
+parser.add_argument("--activation_map", action='store_true', help='if raise, return feature activation map')
 
 args = parser.parse_args()
 

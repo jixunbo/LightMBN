@@ -4,16 +4,16 @@ class BNNeck(nn.Module):
     def __init__(self, input_dim, class_num, return_f=False):
         super(BNNeck, self).__init__()
         self.return_f = return_f
-        self.bn = nn.BatchNorm2d(input_dim)
+        self.bn = nn.BatchNorm1d(input_dim)
         self.bn.bias.requires_grad_(False)
         self.classifier = nn.Linear(input_dim, class_num, bias=False)
         self.bn.apply(self.weights_init_kaiming)
         self.classifier.apply(self.weights_init_classifier)
 
     def forward(self, x):
-        before_neck = x.squeeze(dim=3).squeeze(dim=2)
-        # print(before_neck.shape)
-        after_neck = self.bn(x).squeeze(dim=3).squeeze(dim=2)
+        before_neck = x.view(x.size(0), x.size(1))
+        after_neck = self.bn(before_neck)
+
         if self.return_f:
             score = self.classifier(after_neck)
             return after_neck, score, before_neck
@@ -52,7 +52,7 @@ class BNNeck3(nn.Module):
 
         self.reduction = nn.Conv2d(
             input_dim, feat_dim, 1, bias=False)
-        self.bn = nn.BatchNorm2d(feat_dim)
+        self.bn = nn.BatchNorm1d(feat_dim)
 
         self.bn.bias.requires_grad_(False)
         self.classifier = nn.Linear(feat_dim, class_num, bias=False)
@@ -61,8 +61,10 @@ class BNNeck3(nn.Module):
 
     def forward(self, x):
         x = self.reduction(x)
-        before_neck = x.squeeze(dim=3).squeeze(dim=2)
-        after_neck = self.bn(x).squeeze(dim=3).squeeze(dim=2)
+        # before_neck = x.squeeze(dim=3).squeeze(dim=2)
+        # after_neck = self.bn(x).squeeze(dim=3).squeeze(dim=2)
+        before_neck = x.view(x.size(0), x.size(1))
+        after_neck = self.bn(before_neck)
         if self.return_f:
             score = self.classifier(after_neck)
             return after_neck, score, before_neck
@@ -96,7 +98,7 @@ class BNNeck3(nn.Module):
 
 
 class ClassBlock(nn.Module):
-    def __init__(self, input_dim, class_num, droprate, relu=False, bnorm=True, num_bottleneck=512, linear=True, return_f=False):
+    def __init__(self, input_dim, class_num, droprate=0, relu=False, bnorm=True, num_bottleneck=512, linear=True, return_f=False):
         super(ClassBlock, self).__init__()
         self.return_f = return_f
         add_block = []

@@ -105,6 +105,9 @@ class MCMP_r(nn.Module):
         else:
             self.batch_drop_block = None
 
+        self.activation_map = args.activation_map
+
+
     def forward(self, x):
         # if self.batch_drop_block is not None:
         #     x = self.batch_drop_block(x)
@@ -115,6 +118,17 @@ class MCMP_r(nn.Module):
         par = self.partial_branch(x)
         cha = self.channel_branch(x)
 
+        if self.activation_map:
+
+            _, _, h_par,_ = par.size()
+
+            fmap_p0 = par[:, :, :h_par//2, :]
+            fmap_p1 = par[:, :, h_par//2:, :]
+            fmap_c0 = cha[:, :self.chs, :,:]
+            fmap_c1 = cha[:, self.chs:, :,:]
+
+            return glo, fmap_c0, fmap_c1, fmap_p0, fmap_p1
+
         if self.batch_drop_block is not None:
             glo = self.batch_drop_block(glo)
 
@@ -122,6 +136,8 @@ class MCMP_r(nn.Module):
         g_par = self.global_pooling(par)  # shape:(batchsize, 2048,1,1)
         p_par = self.partial_pooling(par)  # shape:(batchsize, 2048,3,1)
         cha = self.channel_pooling(cha)
+
+
 
         p0 = p_par[:, :, 0:1, :]
         p1 = p_par[:, :, 1:2, :]

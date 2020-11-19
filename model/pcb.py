@@ -49,7 +49,7 @@ class PCB(nn.Module):
         x = self.model.layer4(x)
         feat_to_global_branch = self.avgpool_before_triplet(x)
         x = self.avgpool(x)
-        x = self.dropout(x)
+        # x = self.dropout(x)
         # print(x.shape)
         part = {}
         predict = {}
