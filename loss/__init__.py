@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 
-from loss.triplet import TripletLoss, TripletSemihardLoss, CrossEntropyLabelSmooth
-from loss.grouploss import GroupLoss
+from .triplet import TripletLoss, TripletSemihardLoss, CrossEntropyLabelSmooth
+from .grouploss import GroupLoss
 from loss.multi_similarity_loss import MultiSimilarityLoss
 from loss.focal_loss import FocalLoss
 from loss.osm_caa_loss import OSM_CAA_Loss

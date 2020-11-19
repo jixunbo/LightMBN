@@ -102,6 +102,7 @@ class CAM_Module(Module):
         m_batchsize, C, height, width = x.size()
         proj_query = x.view(m_batchsize, C, -1)
         proj_key = x.view(m_batchsize, C, -1).permute(0, 2, 1)
+        # proj_key = x.view(m_batchsize, C, -1).permute(0, 2, 1).contiguous()
         energy = torch.bmm(proj_query, proj_key)
         energy_new = torch.max(
             energy, -1, keepdim=True)[0].expand_as(energy) - energy

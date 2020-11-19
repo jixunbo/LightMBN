@@ -47,6 +47,7 @@ engine = engine_v3.Engine(args, model, optimzer,
 
 n = 0
 while not engine.terminate():
+
     n += 1
     engine.train()
     if args.test_every != 0 and n % args.test_every == 0:
