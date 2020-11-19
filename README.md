@@ -44,7 +44,7 @@ To inplement Multi-Parts Multi-Channels Network with Multi-Similarity loss, run
 `python [path to repo]/main.py --datadir [path to datasets] --data_train DukeMTMC --data_test DukeMTMC --model MCMP_n --batchid 8 --batchimage 8 --batchtest 32 --test_every 10 --epochs 120 --save '' --decay_type step_50_80_110 --loss 0.5*CrossEntropy+0.5*MSLoss --margin 0.75 --nGPU 1 --lr 3.5e-4 --optimizer ADAM --random_erasing --warmup 'constant' --if_labelsmooth --feats 512`
 
 Also, using pre-defined config file
-`python [path to repo]/main.py --config [path to repo]/mpmc_config.yaml --save ''`
+`python [path to repo]/main.py --config [path to repo]/mcmp_config.yaml --save ''`
 
 All logs, results and parameters will be saved in folder 'experiment'.
 
@@ -56,7 +56,7 @@ Note that, the option '--datadir' is the dataset root, which contains folder Mar
 
 '--epochs' is the epochs we'd like to train, while '--test_every 10' means evaluation will be excuted in every 10 epochs, the parameters of network and optimizer are updated after every every evaluation. 
 
-Actually, for the MPMC model we have two kinds of backbone, MPMC_r we use ResNet 50 as backbone, while MPMC_n is OSNet, OSNet contrains much less parameters but could achieve a little bit better performance than ResNet50.
+Actually, for the MCMP model we have two kinds of backbone, MCMP_r we use ResNet 50 as backbone, while MCMP_n is OSNet, OSNet contrains much less parameters but could achieve a little bit better performance than ResNet50.
 
 If you would like to re-inplement Bag of Tricks, run
 
@@ -78,17 +78,17 @@ And also, for MGN model run
 
 If you have pretrained model and config file, run
 
-`python [path to repo]/main.py --test_only --config [path to repo]/mpmc_config.yaml --pre_train [path to pretrained model]` to see the performance of the model.
+`python [path to repo]/main.py --test_only --config [path to repo]/mcmp_config.yaml --pre_train [path to pretrained model]` to see the performance of the model.
 
 
 
-[here](https://drive.google.com/open?id=1dIsI0b9kgytd02tl5cPLMBON7eHlyIA5) is the MPMC **pre-trained model** and config file.
+[here](https://drive.google.com/open?id=1dIsI0b9kgytd02tl5cPLMBON7eHlyIA5) is the MCMP **pre-trained model** and config file.
 
 
 
 If you want to resume training process, we assume you have the checkpoint file 'model-latest.pth', run
 
-`python [path to repo]/main.py --config [path to repo]/mpmc_config.yaml --load [path to checkpoint]`
+`python [path to repo]/main.py --config [path to repo]/mcmp_config.yaml --load [path to checkpoint]`
 
 Of course, you can also set options individually using argparse command-line without config file.
 
@@ -106,8 +106,8 @@ If you are hard-core player ^ ^ and you'd like to try different models or option
 ### Results
 | Model | Market1501 | DukeMTMC-reID |
 | --- | -- | -- |
-| MPMC_n | 96.3 (90.9) |  91.3 (82.6) |
-| MPMC_r | 95.6 (90.1) |  90.2 (81.5) |
+| MCMP_n | 96.3 (90.9) |  91.3 (82.6) |
+| MCMP_r | 95.6 (90.1) |  90.2 (81.5) |
 | BoT | 94.2 (85.4) |  86.7 (75.8) |
 | PCB | 95.1 (86.3) |  87.6 (76.6) |
 | MGN | 94.7 (87.5) | 88.7 (79.4) |
@@ -145,7 +145,7 @@ Additionally, the evaluation metric method is the same as bag of tricks [repo](h
 
 '--epochs', type=int, is the epochs we'd like to train, while '--test_every 10' means evaluation will be excuted in every 10 epochs, the parameters of network and optimizer are updated after every every evaluation. 
 
-'--model', default='MGN', name of model, options: MPMC_n, MPMC_r,  ResNet50, PCB, MGN.
+'--model', default='MGN', name of model, options: MCMP_n, MCMP_r,  ResNet50, PCB, MGN.
 
 '--loss', type=str, default='0.5\*CrossEntropy+0.5\*Triplet', you can combine different loss functions and corresponding weights, you can use only one loss function or 2 and more functions, e.g. '1\*CrossEntropy', '0.5\*CrossEntropy+0.5\*MSLoss+0.0005\*CenterLoss', options: CrossEntropy, Triplet, MSLoss, CenterLoss, Focal, GroupLoss.
 
