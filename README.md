@@ -1,4 +1,4 @@
-# Multi-Parts Multi-Channels Network for Person Re-identification
+#  Multi-Channel Multi-Part Network for Person Re-identification
 
 This repo support
 - [x] easy dataset preparation, including Market-1501, DukeMTMC-ReID, CUHK03, MOT17...
@@ -9,7 +9,7 @@ This repo support
 
 
 List of functions
-- Warm up learning rate
+- Warm up cosine annealing learning rate
 - Random erasing augmentation
 - Cutout augmentation
 - Batch Drop Block
@@ -24,7 +24,7 @@ List of functions
 - BNNeck
 
 Inplemented networks:
-- Multi-Parts Multi-Channels Network, which we proposed
+- Multi-Channel Multi-Part Network, which we proposed
 - PCB [[link]](https://arxiv.org/pdf/1711.09349.pdf)
 - MGN [[link]](https://arxiv.org/abs/1804.01438)
 - Bag of tricks [[link]](http://openaccess.thecvf.com/content_CVPRW_2019/papers/TRMTMCT/Luo_Bag_of_Tricks_and_a_Strong_Baseline_for_Deep_Person_CVPRW_2019_paper.pdf)
