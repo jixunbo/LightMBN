@@ -30,11 +30,12 @@ class checkpoint():
             self.dir = ROOT_PATH + '/experiment/' + args.save
 
             # Only works if using google drive
-            if ROOT_PATH[:8]=='/content':
-                self.model_save_dir = osp.join(ROOT_PATH,'..','..','experiment'+args.save)
+            if ROOT_PATH[:8] == '/content':
+                self.model_save_dir = osp.join(
+                    ROOT_PATH, '..', '..', 'experiment' + args.save)
             else:
                 self.model_save_dir = 'none'
-        
+
         else:
             self.dir = ROOT_PATH + '/experiment/' + args.load
             if not os.path.exists(self.dir):
@@ -68,12 +69,10 @@ class checkpoint():
             # _make_dir(self.dir + '/model')
             _make_dir(self.dir + '/scripts')
 
-            copytree(os.path.join(ROOT_PATH, 'model'), self.dir + '/scripts/model' +
-                     datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S'))
-            copytree(os.path.join(ROOT_PATH, 'loss'), self.dir + '/scripts/loss' +
-                     datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S'))
-            # copyfile(os.path.join(ROOT_PATH, 'engine.py'), self.dir +
-            #          '/scripts/engine{}.py'.format(datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S')))
+            # copytree(os.path.join(ROOT_PATH, 'model'), self.dir + '/scripts/model' +
+            #          datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S'))
+            # copytree(os.path.join(ROOT_PATH, 'loss'), self.dir + '/scripts/loss' +
+            #          datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S'))
 
         open_type = 'a' if os.path.exists(self.dir + '/log.txt') else 'w'
         self.log_file = open(self.dir + '/log.txt', open_type)
@@ -265,10 +264,8 @@ class checkpoint():
                 '(** ignored and continue **)'.format(weight_path)
             )
         else:
-            print(
-                'Successfully loaded pretrained weights from "{}"'.
-                format(weight_path)
-            )
+            self.write_log('[INFO] Successfully loaded pretrained weights from "{}"'.
+                           format(weight_path))
             if len(discarded_layers) > 0:
                 print(
                     '** The following layers are discarded '
@@ -300,27 +297,7 @@ class checkpoint():
         """
         self.write_log('[INFO] Loading checkpoint from "{}"'.format(fpath))
         checkpoint = self.load_checkpoint(fpath)
-        # print(checkpoint['state_dict'].keys())
-        # print('oooooooooooooo')
-        # print(model.state_dict().keys())
-        # kk=[]
-        # ll=[]
-        # for k,l in zip(model.state_dict().keys(),checkpoint['state_dict'].keys()):
-        #     if k == l :
-        #         kk.append(k)
-        #     else:
-        #         ll.append(k)
-        #         print('not match')
-        # print(kk)
-        # print(ll)
-        # for k in model.state_dict().keys():
-        #     print(k)
-        # for l in checkpoint['state_dict'].keys():
-        #     print(l)
-        # print(checkpoint['state_dict'])
-        # print(len(checkpoint['state_dict'].keys()))
-        # print(len(model.state_dict().keys()))
-        # print(model.state_dict())
+
         model.load_state_dict(checkpoint['state_dict'])
         self.write_log('[INFO] Model weights loaded')
         if optimizer is not None and 'optimizer' in checkpoint.keys():
@@ -337,4 +314,4 @@ class checkpoint():
         if 'log' in checkpoint.keys():
             self.log = checkpoint['log']
 
-        return start_epoch
+        return start_epoch, model, optimizer

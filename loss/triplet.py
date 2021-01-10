@@ -4,6 +4,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+
 class TripletSemihardLoss(nn.Module):
     """
     Shape:
@@ -54,7 +55,9 @@ class TripletSemihardLoss(nn.Module):
 
 
 class TripletLoss(nn.Module):
-    """Triplet loss with hard positive/negative mining.
+    """
+    Batch Hard Trilet Loss
+    For margin = 0. , which implemented as Batch Hard Soft Margin Triplet loss
 
     Reference:
     Hermans et al. In Defense of the Triplet Loss for Person Re-Identification. arXiv:1703.07737.
@@ -89,8 +92,7 @@ class TripletLoss(nn.Module):
         dist = torch.pow(inputs, 2).sum(dim=1, keepdim=True).expand(n, n)
         dist = dist + dist.t()
         # dist.addmm_(1, -2, inputs, inputs.t())
-        dist.addmm_(inputs, inputs.t(), beta=1,alpha=-2)
-
+        dist.addmm_(inputs, inputs.t(), beta=1, alpha=-2)
 
         dist = dist.clamp(min=1e-12).sqrt()  # for numerical stability
         # For each anchor, find the hardest positive and negative
@@ -99,6 +101,7 @@ class TripletLoss(nn.Module):
         for i in range(n):
             dist_ap.append(dist[i][mask[i]].max().unsqueeze(0))
             dist_an.append(dist[i][mask[i] == 0].min().unsqueeze(0))
+
         dist_ap = torch.cat(dist_ap)
         dist_an = torch.cat(dist_an)
         # Compute ranking hinge loss
@@ -140,10 +143,14 @@ class CrossEntropyLabelSmooth(nn.Module):
             targets: ground truth labels with shape (num_classes)
         """
         log_probs = self.logsoftmax(inputs)
+        # print(log_probs.device)
         targets = torch.zeros(log_probs.size()).scatter_(
-            1, targets.unsqueeze(1).data.cpu(), 1)
-        if self.use_gpu:
-            targets = targets.cuda()
+            1, targets.unsqueeze(1).data.cpu(), 1).to(log_probs.device)
+        # targets = torch.zeros(log_probs.size()).scatter_(
+        #     1, targets.unsqueeze(1).long(), 1)
+        # if self.use_gpu:
+        #     targets = targets.cuda()
+        # print(targets.device)
         targets = (1 - self.epsilon) * targets + \
             self.epsilon / self.num_classes
         loss = (- targets * log_probs).mean(0).sum()

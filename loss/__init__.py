@@ -47,7 +47,8 @@ class LossFunction():
             elif loss_type == 'OSLoss':
                 loss_function = OSM_CAA_Loss()
             elif loss_type == 'CenterLoss':
-                loss_function = CenterLoss(num_classes=args.num_classes, feat_dim=args.feats)
+                loss_function = CenterLoss(
+                    num_classes=args.num_classes, feat_dim=args.feats)
 
             # elif loss_type == 'Mix':
             #     self.fl = FocalLoss(reduction='mean')
@@ -75,6 +76,8 @@ class LossFunction():
         #         self.loss_module.append(l['function'])
 
         self.log = torch.Tensor()
+        # self.start_log()
+        # print(self.log,'kkkk')
 
         # device = torch.device('cpu' if args.cpu else 'cuda')
         # self.loss_module.to(device)
@@ -88,30 +91,41 @@ class LossFunction():
 
     def compute(self, outputs, labels):
         losses = []
+        # print(self.log, 'iiuu')
+        # print(self.loss,'oooooo')
         for i, l in enumerate(self.loss):
+            # print(i,'iiiiii')
             if l['type'] in ['CrossEntropy']:
 
                 if isinstance(outputs[0], list):
                     loss = [l['function'](output, labels)
-                        for output in outputs[0]]
+                            for output in outputs[0]]
+                    # print(loss)
                 elif isinstance(outputs[0], torch.Tensor):
-                    loss = [l['function'](outputs[0],labels)]
+                    loss = [l['function'](outputs[0], labels)]
                 else:
-                    raise TypeError('Unexpected type: {}'.format(type(outputs[0])))
+                    raise TypeError(
+                        'Unexpected type: {}'.format(type(outputs[0])))
 
                 loss = sum(loss)
                 effective_loss = l['weight'] * loss
                 losses.append(effective_loss)
+                # print(self.log,'llllog')
+                # print(self.log.device)
                 self.log[-1, i] += effective_loss.item()
 
-            elif l['type'] in ['Triplet','MSLoss']:
+            elif l['type'] in ['Triplet', 'MSLoss']:
+                # print('ppppppppp')
                 if isinstance(outputs[-1], list):
+                    # print('99999999')
                     loss = [l['function'](output, labels)
-                        for output in outputs[-1]]
+                            for output in outputs[-1]]
                 elif isinstance(outputs[-1], torch.Tensor):
-                    loss = [l['function'](outputs[-1],labels)]
+                    # print('6666666666')
+                    loss = [l['function'](outputs[-1], labels)]
                 else:
-                    raise TypeError('Unexpected type: {}'.format(type(outputs[-1])))
+                    raise TypeError(
+                        'Unexpected type: {}'.format(type(outputs[-1])))
                 loss = sum(loss)
                 effective_loss = l['weight'] * loss
                 losses.append(effective_loss)
@@ -120,11 +134,12 @@ class LossFunction():
             elif l['type'] in ['CenterLoss']:
                 if isinstance(outputs[-1], list):
                     loss = [l['function'](output, labels)
-                        for output in outputs[-1]]
+                            for output in outputs[-1]]
                 elif isinstance(outputs[-1], torch.Tensor):
-                    loss = [l['function'](outputs[-1],labels)]
+                    loss = [l['function'](outputs[-1], labels)]
                 else:
-                    raise TypeError('Unexpected type: {}'.format(type(outputs[-1])))
+                    raise TypeError(
+                        'Unexpected type: {}'.format(type(outputs[-1])))
 
                 loss = sum(loss)
                 effective_loss = l['weight'] * loss
@@ -171,9 +186,8 @@ class LossFunction():
             plt.savefig('{}/loss_{}.jpg'.format(apath, l['type']))
             plt.close(fig)
 
-
     # Following codes not being used
-    
+
     def step(self):
         for l in self.get_loss_module():
             if hasattr(l, 'scheduler'):
@@ -205,6 +219,6 @@ class LossFunction():
                 for _ in range(len(self.log)):
                     l.scheduler.step()
 
-def make_loss(args,ckpt):
-    return LossFunction(args,ckpt)
-    
+
+def make_loss(args, ckpt):
+    return LossFunction(args, ckpt)

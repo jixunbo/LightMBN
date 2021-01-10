@@ -12,6 +12,7 @@ import utils.utility as utility
 from utils.model_complexity import compute_model_complexity
 from torch.utils.collect_env import get_pretty_env_info
 import yaml
+import torch
 
 
 if args.config != '':
@@ -19,6 +20,7 @@ if args.config != '':
         config = yaml.load(f)
     for op in config:
         setattr(args, op, config[op])
+torch.backends.cudnn.benchmark = True
 
 # loader = data.Data(args)
 ckpt = utility.checkpoint(args)
@@ -30,8 +32,9 @@ loss = loss.make_loss(args, ckpt) if not args.test_only else None
 
 start = -1
 if args.load != '':
-    start = ckpt.resume_from_checkpoint(
-        osp.join(ckpt.dir, 'model-latest.pth'), model, optimzer) - 1
+    start, model, optimizer = ckpt.resume_from_checkpoint(
+        osp.join(ckpt.dir, 'model-latest.pth'), model, optimzer)
+    start = start - 1
 if args.pre_train != '':
     ckpt.load_pretrained_weights(model, args.pre_train)
 
@@ -42,13 +45,15 @@ ckpt.write_log('[INFO] Model parameters: {com[0]} flops: {com[1]}'.format(com=co
                                                                           ))
 
 engine = engine_v3.Engine(args, model, optimzer,
-                         scheduler, loss, loader, ckpt)
+                          scheduler, loss, loader, ckpt)
 # engine = engine.Engine(args, model, loss, loader, ckpt)
 
-n = 0
+n = start + 1
 while not engine.terminate():
 
     n += 1
     engine.train()
     if args.test_every != 0 and n % args.test_every == 0:
+        engine.test()
+    elif n == args.epochs:
         engine.test()

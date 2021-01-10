@@ -107,11 +107,15 @@ def make_scheduler(args, optimizer, last_epoch):
     if args.w_cosine_annealing:
 
         scheduler = WarmupCosineAnnealingLR(
-            optimizer, multiplier=1, warmup_epoch=10, epochs=args.epochs, last_epoch=last_epoch)
+            optimizer, multiplier=1, warmup_epoch=10, min_lr=args.lr / 1000, epochs=args.epochs, last_epoch=last_epoch)
+        # optimizer, multiplier=1, warmup_epoch=10, min_lr=3.5e-7, epochs=args.epochs, last_epoch=last_epoch)
+
         return scheduler
 
     scheduler = WarmupMultiStepLR(
         optimizer, milestones, args.gamma, 0.01, 10, args.warmup, last_epoch=last_epoch)
+
+    return scheduler
 
     if args.decay_type == 'step':
         scheduler = lrs.StepLR(
@@ -123,7 +127,7 @@ def make_scheduler(args, optimizer, last_epoch):
         milestones = args.decay_type.split('_')
         milestones.pop(0)
         milestones = list(map(lambda x: int(x), milestones))
-        print(milestones, 'milestones')
+        # print(milestones, 'milestones')
         scheduler = lrs.MultiStepLR(
             optimizer,
             milestones=milestones,

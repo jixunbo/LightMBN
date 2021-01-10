@@ -1,3 +1,5 @@
+
+
 import copy
 
 import torch
@@ -6,33 +8,12 @@ import torch.nn.functional as F
 import random
 import math
 from .osnet import osnet_x1_0, OSBlock
-from .attention import PAM_Module, CAM_Module, SE_Module, Dual_Module
+from .attention import BatchDrop, PAM_Module, CAM_Module, SE_Module, Dual_Module
 from .bnneck import BNNeck, BNNeck3
 from torchvision.models.resnet import resnet50, Bottleneck
-
+from .resnet50_ibn import resnet50_ibn_a
 
 from torch.autograd import Variable
-
-
-class BatchDrop(nn.Module):
-    def __init__(self, h_ratio, w_ratio):
-        super(BatchDrop, self).__init__()
-        self.h_ratio = h_ratio
-        self.w_ratio = w_ratio
-
-    def forward(self, x):
-        if self.training:
-            h, w = x.size()[-2:]
-            rh = round(self.h_ratio * h)
-            rw = round(self.w_ratio * w)
-            sx = random.randint(0, h - rh)
-            sy = random.randint(0, w - rw)
-            mask = x.new_ones(x.size())
-            mask[:, :, sx:sx + rh, sy:sy + rw] = 0
-            x = x * mask
-        return x
-
-
 
 
 class MCMP_r(nn.Module):
@@ -41,6 +22,8 @@ class MCMP_r(nn.Module):
 
         self.n_ch = 2
         self.chs = 2048 // self.n_ch
+
+        # resnet = resnet50_ibn_a(last_stride=1, pretrained=True)
 
         resnet = resnet50(pretrained=True)
 
@@ -71,16 +54,9 @@ class MCMP_r(nn.Module):
         self.channel_branch = nn.Sequential(copy.deepcopy(
             conv3), copy.deepcopy(no_downsample_conv4))
 
-        if args.pool == 'max':
-            pool2d = nn.AdaptiveMaxPool2d
-        elif args.pool == 'avg':
-            pool2d = nn.AdaptiveAvgPool2d
-        else:
-            raise Exception()
-
-        self.global_pooling = pool2d((1, 1))
-        self.partial_pooling = pool2d((2, 1))
-        self.channel_pooling = pool2d((1, 1))
+        self.global_pooling = nn.AdaptiveMaxPool2d((1, 1))
+        self.partial_pooling = nn.AdaptiveAvgPool2d((2, 1))
+        self.channel_pooling = nn.AdaptiveMaxPool2d((1, 1))
 
         reduction = BNNeck3(2048, args.num_classes,
                             args.feats, return_f=True)
@@ -93,20 +69,22 @@ class MCMP_r(nn.Module):
             self.chs, args.feats, 1, bias=False), nn.BatchNorm2d(args.feats), nn.ReLU(True))
         self.weights_init_kaiming(self.shared)
 
-        self.reduction_ch_0 = BNNeck(args.feats, args.num_classes, return_f=True)
-        self.reduction_ch_1 = BNNeck(args.feats, args.num_classes, return_f=True)
+        self.reduction_ch_0 = BNNeck(
+            args.feats, args.num_classes, return_f=True)
+        self.reduction_ch_1 = BNNeck(
+            args.feats, args.num_classes, return_f=True)
 
         # if args.drop_block:
         #     print('Using batch random erasing block.')
         #     self.batch_drop_block = BatchRandomErasing()
         if args.drop_block:
             print('Using batch drop block.')
-            self.batch_drop_block = BatchDrop(h_ratio=args.h_ratio, w_ratio=args.w_ratio)
+            self.batch_drop_block = BatchDrop(
+                h_ratio=args.h_ratio, w_ratio=args.w_ratio)
         else:
             self.batch_drop_block = None
 
         self.activation_map = args.activation_map
-
 
     def forward(self, x):
         # if self.batch_drop_block is not None:
@@ -120,12 +98,12 @@ class MCMP_r(nn.Module):
 
         if self.activation_map:
 
-            _, _, h_par,_ = par.size()
+            _, _, h_par, _ = par.size()
 
-            fmap_p0 = par[:, :, :h_par//2, :]
-            fmap_p1 = par[:, :, h_par//2:, :]
-            fmap_c0 = cha[:, :self.chs, :,:]
-            fmap_c1 = cha[:, self.chs:, :,:]
+            fmap_p0 = par[:, :, :h_par // 2, :]
+            fmap_p1 = par[:, :, h_par // 2:, :]
+            fmap_c0 = cha[:, :self.chs, :, :]
+            fmap_c1 = cha[:, self.chs:, :, :]
 
             return glo, fmap_c0, fmap_c1, fmap_p0, fmap_p1
 
@@ -136,8 +114,6 @@ class MCMP_r(nn.Module):
         g_par = self.global_pooling(par)  # shape:(batchsize, 2048,1,1)
         p_par = self.partial_pooling(par)  # shape:(batchsize, 2048,3,1)
         cha = self.channel_pooling(cha)
-
-
 
         p0 = p_par[:, :, 0:1, :]
         p1 = p_par[:, :, 1:2, :]
@@ -203,13 +179,12 @@ if __name__ == '__main__':
     parser.add_argument('--w_ratio', type=float, default=1.0, help='')
     parser.add_argument('--h_ratio', type=float, default=0.33, help='')
 
-
     args = parser.parse_args()
     net = MCMP_r(args)
     # net.classifier = nn.Sequential()
     # print([p for p in net.parameters()])
     # a=filter(lambda p: p.requires_grad, net.parameters())
-    # print(a) 
+    # print(a)
 
     print(net)
     input = Variable(torch.FloatTensor(8, 3, 384, 128))

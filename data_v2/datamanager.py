@@ -8,6 +8,17 @@ from .sampler import build_train_sampler
 from .transforms import build_transforms
 from .datasets import init_image_dataset, init_video_dataset
 
+"""
+Speed Up Dataloader
+
+"""
+from prefetch_generator import BackgroundGenerator
+
+class DataloaderX(torch.utils.data.DataLoader):
+
+    def __iter__(self):
+        return BackgroundGenerator(super().__iter__())
+
 
 class DataManager(object):
     r"""Base data manager.
@@ -126,7 +137,9 @@ class ImageDataManager(DataManager):
         targets = args.data_test.lower()
         height = args.height
         width = args.width
-        transforms = ['random_flip', 'random_crop']
+        transforms = ['random_flip', 
+        'random_crop'
+        ]
         norm_mean = [0.485, 0.456, 0.406]
         norm_std = [0.229, 0.224, 0.225]
         use_gpu = not args.cpu
@@ -137,7 +150,7 @@ class ImageDataManager(DataManager):
         batch_size_test = args.batchtest
         workers = args.nThread
         train_sampler = 'random'
-        cuhk03_labeled = True
+        cuhk03_labeled = False
         cuhk03_classic_split = False
         market1501_500k = False
 
@@ -177,7 +190,8 @@ class ImageDataManager(DataManager):
             num_instances=num_instances
         )
 
-        self.train_loader = torch.utils.data.DataLoader(
+        # self.train_loader = torch.utils.data.DataLoader(
+        self.train_loader = DataloaderX(
             trainset,
             sampler=train_sampler,
             batch_size=batch_size_train,
@@ -206,7 +220,8 @@ class ImageDataManager(DataManager):
                 cuhk03_classic_split=cuhk03_classic_split,
                 market1501_500k=market1501_500k
             )
-            self.testloader[name]['query'] = torch.utils.data.DataLoader(
+            # self.testloader[name]['query'] = torch.utils.data.DataLoader(
+            self.testloader[name]['query'] = DataloaderX(
                 queryset,
                 batch_size=batch_size_test,
                 shuffle=False,
@@ -228,7 +243,8 @@ class ImageDataManager(DataManager):
                 cuhk03_classic_split=cuhk03_classic_split,
                 market1501_500k=market1501_500k
             )
-            self.testloader[name]['gallery'] = torch.utils.data.DataLoader(
+            # self.testloader[name]['gallery'] = torch.utils.data.DataLoader(
+            self.testloader[name]['gallery'] = DataloaderX(
                 galleryset,
                 batch_size=batch_size_test,
                 shuffle=False,

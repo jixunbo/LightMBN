@@ -29,7 +29,7 @@ parser.add_argument("--bnneck", action='store_true', help='Apply bnneck before c
 parser.add_argument("--feat_inference", type=str,default='after', help='Apply bnneck before classifier, refer to BoT paper')
 parser.add_argument("--drop_block", action='store_true', help='Apply batch drop block')
 parser.add_argument("--w_ratio", type=float, default=1.0, help='w_ratio of batch drop block')
-parser.add_argument("--h_ratio", type=float, default=0.33, help='w_ratio of batch drop block')
+parser.add_argument("--h_ratio", type=float, default=0.3, help='w_ratio of batch drop block')
 
 
 

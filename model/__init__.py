@@ -11,7 +11,9 @@ class Model(nn.Module):
 
     def __init__(self, args, ckpt):
         super(Model, self).__init__()
-        print('[INFO] Making {} model...'.format(args.model))
+        ckpt.write_log('[INFO] Making {} model...'.format(args.model))
+        if args.drop_block:
+            ckpt.write_log('[INFO] Using batch drop block with h_ratio {} and w_ratio {}.'.format(args.h_ratio, args.w_ratio))
 
         self.device = torch.device('cpu' if args.cpu else 'cuda')
         self.nGPU = args.nGPU

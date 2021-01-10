@@ -12,7 +12,7 @@ List of functions
 - Warm up cosine annealing learning rate
 - Random erasing augmentation
 - Cutout augmentation
-- Batch Drop Block
+- Batch Drop Block and Batch Erasing
 - Label smoothing(Cross Entropy loss)
 - Triplet loss
 - Multi-Simulatity loss
@@ -29,11 +29,11 @@ Inplemented networks:
 - MGN [[link]](https://arxiv.org/abs/1804.01438)
 - Bag of tricks [[link]](http://openaccess.thecvf.com/content_CVPRW_2019/papers/TRMTMCT/Luo_Bag_of_Tricks_and_a_Strong_Baseline_for_Deep_Person_CVPRW_2019_paper.pdf)
 - OSNet [[link]](https://arxiv.org/abs/1905.00953)
-- Batch Drop Block for Person ReID [[link]](https://arxiv.org/abs/1811.07130)
+- Batch Drop Block(BDB) for Person ReID [[link]](https://arxiv.org/abs/1811.07130)
 
 
 ## Getting Started
-The designed architecture is concise and easy explicable, where the file engine.py defines the train/ test process and main.py controls the overall epochs, and the folders model, loss, optimizer including respective parts of neural network.
+The designed code architecture is concise and easy explicable, where the file engine.py defines the train/ test process and main.py controls the overall epochs, and the folders model, loss, optimizer including respective parts of neural network.
 
 The user-friendly command-line module argparse helps us indicate different datasets, networks, loss functions, and tricks as we need, 
 the detailed options/configurations are described in the bottom of this page.
@@ -41,7 +41,8 @@ the detailed options/configurations are described in the bottom of this page.
 If you don't have any dataset yet, run `git clone https://github.com/jixunbo/ReIDataset.git` to download Market-1501, DukeMTMC, and MOT17.
 
 To inplement Multi-Parts Multi-Channels Network with Multi-Similarity loss, run
-`python [path to repo]/main.py --datadir [path to datasets] --data_train DukeMTMC --data_test DukeMTMC --model MCMP_n --batchid 8 --batchimage 8 --batchtest 32 --test_every 10 --epochs 120 --save '' --decay_type step_50_80_110 --loss 0.5*CrossEntropy+0.5*MSLoss --margin 0.75 --nGPU 1 --lr 3.5e-4 --optimizer ADAM --random_erasing --w_cosine_annealing --if_labelsmooth --feats 512`
+
+`python [path to repo]/main.py --datadir [path to datasets] --data_train dukemtmc --data_test dukemtmc --model MCMP_n --batchid 8 --batchimage 6 --batchtest 32 --test_every 20 --epochs 110 --loss 0.5*CrossEntropy+0.5*MSLoss --margin 0.7 --nGPU 1 --lr 6e-4 --optimizer ADAM --random_erasing --feats 512 --pool avg --save '' --if_labelsmooth --w_cosine_annealing`
 
 Also, using pre-defined config file
 `python [path to repo]/main.py --config [path to repo]/mcmp_config.yaml --save ''`
@@ -52,29 +53,29 @@ Note that, the option '--datadir' is the dataset root, which contains folder Mar
 
 '--data_train' and '--data_test' specify the name of train/test dataset, which we can train on one dataset but test on another dataset.
 
-'--batchid 6' and '--batchimage 8' indicate that each batch contrains 6 persons, each person has 8 different images, totally 48 images.
+'--batchid 8' and '--batchimage 6' indicate that each batch contrains 8 persons, each person has 6 different images, totally 48 images.
 
 '--epochs' is the epochs we'd like to train, while '--test_every 10' means evaluation will be excuted in every 10 epochs, the parameters of network and optimizer are updated after every every evaluation. 
 
-Actually, for the MCMP model we have two kinds of backbone, MCMP_r we use ResNet 50 as backbone, while MCMP_n is OSNet, OSNet contrains much less parameters but could achieve a little bit better performance than ResNet50.
+Actually, for the MCMP model we have two kinds of backbone, MCMP_r we use ResNet 50 or ResNet 50 IBN as backbone, while MCMP_n is OSNet, OSNet contrains much less parameters but could achieve a little bit better performance than ResNet50.
 
 If you would like to re-inplement Bag of Tricks, run
 
-`python [path to repo]/main.py --datadir [path to datasets] --data_train Market1501 --data_test Market1501 --model ResNet50 --batchid 16 --batchimage 4 --batchtest 32 --test_every 10 --epochs 120 --save '' --decay_type step_40_70 --loss 0.5*CrossEntropy+0.5*Triplet --margin 0.3 --nGPU 1 --lr 3.5e-4 --optimizer ADAM --random_erasing --warmup 'constant' --if_labelsmooth`
+`python [path to repo]/main.py --datadir [path to datasets] --data_train Market1501 --data_test Market1501 --model ResNet50 --batchid 16 --batchimage 4 --batchtest 32 --test_every 10 --epochs 120 --save '' --decay_type step_40_70 --loss 0.5*CrossEntropy+0.5*Triplet --margin 0.3 --nGPU 1 --lr 3.5e-4 --optimizer ADAM --random_erasing --warmup 'linear' --if_labelsmooth`
 
 or 
 
 `python [path to repo]/main.py --config [path to repo]/bag_of_tricks_config.yaml --save`
 
-If you would like to re-inplement PCB, run
+If you would like to re-inplement PCB with powerful training tricks, run
 
-`python [path to repo]/main.py --datadir [path to datasets] --data_train Market1501 --data_test Market1501 --model PCB --batchid 8 --batchimage 8 --batchtest 32 --test_every 10 --epochs 120 --save '' --decay_type step_50_80_110 --loss 0.5*CrossEntropy+0.5*MSLoss --margin 0.75 --nGPU 1 --lr 5e-3 --optimizer ADAM --random_erasing --warmup 'constant' --if_labelsmooth --bnneck --parts 3`
+`python [path to repo]/main.py --datadir [path to datasets] --data_train Market1501 --data_test Market1501 --model PCB --batchid 8 --batchimage 8 --batchtest 32 --test_every 10 --epochs 120 --save '' --decay_type step_50_80_110 --loss 0.5*CrossEntropy+0.5*MSLoss --margin 0.7 --nGPU 1 --lr 5e-3 --optimizer ADAM --random_erasing --warmup 'linear' --if_labelsmooth --bnneck --parts 3`
 
 Note that, the option '--parts' is used to set the number of stripes to be devided, original paper set 6.
 
 And also, for MGN model run
 
-`python [path to repo]/main.py --datadir [path to datasets] --data_train Market1501 --data_test Market1501 --model MGN --batchid 16 --batchimage 4 --batchtest 32 --test_every 10 --epochs 120 --save '' --decay_type step_50_80_110 --loss 0.5*CrossEntropy+0.5*Triplet --margin 1.2 --nGPU 1 --lr 2e-4 --optimizer ADAM --random_erasing --warmup 'constant' --if_labelsmooth`
+`python [path to repo]/main.py --datadir [path to datasets] --data_train Market1501 --data_test Market1501 --model MGN --batchid 16 --batchimage 4 --batchtest 32 --test_every 10 --epochs 120 --save '' --decay_type step_50_80_110 --loss 0.5*CrossEntropy+0.5*Triplet --margin 1.2 --nGPU 1 --lr 2e-4 --optimizer ADAM --random_erasing --warmup 'linear' --if_labelsmooth`
 
 If you have pretrained model and config file, run
 
@@ -106,8 +107,8 @@ If you are hard-core player ^ ^ and you'd like to try different models or option
 ### Results
 | Model | Market1501 | DukeMTMC-reID |
 | --- | -- | -- |
-| MCMP_n | 96.3 (90.9) |  91.3 (82.6) |
-| MCMP_r | 95.6 (90.1) |  90.2 (81.5) |
+| MCMP_n | 96.3 (91.3) |  92.0 (83.2) |
+| MCMP_r | 95.8 (90.4) |  90.5 (82.0) |
 | BoT | 94.2 (85.4) |  86.7 (75.8) |
 | PCB | 95.1 (86.3) |  87.6 (76.6) |
 | MGN | 94.7 (87.5) | 88.7 (79.4) |
@@ -155,7 +156,7 @@ Additionally, the evaluation metric method is the same as bag of tricks [repo](h
 
 '--bnneck', action='store_true', if raise, use BNNeck, only for ResNet and PCB.
 
-'--drop_block', action='store_true', if raise, use Batch Drop Block.
+'--drop_block', action='store_true', if raise, use Batch Drop Block, and '--h_ratio 0.3 and --w_ratio 1.0' indicate the erased region on the feature maps. 
 
 '--pool', type=str, default='avg', choose pooling method, options: avg, max.
 
@@ -171,7 +172,9 @@ Additionally, the evaluation metric method is the same as bag of tricks [repo](h
 
 '--gamma', type=float, default=0.1,learning rate decay factor for step decay.
 
-'--warmup', type=str, default='none', learning rate warmup method, options: linear, constant, none.
+'--warmup', type=str, default='constant', learning rate warmup method, options: linear, constant.
+
+'--w_cosine_annealing', action='store_true', if raise, use warm up cosine annealing learning rate scheduler.
 
 '--pcb_different_lr', type=str, default='True', if 'True', use different lr only for PCB, if lr is 5e-3, then lr for classifier is 5e-3, lr for other part is 5e-4.
 

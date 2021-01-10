@@ -11,6 +11,7 @@ __image_datasets = {
     'cuhk03': CUHK03,
     'cuhk03_detected': CUHK03_Detected,
     'cuhk03_labeled': CUHK03_Labeled,
+    'cuhk03_splited': CUHK03_splited,
     'dukemtmc': DukeMTMCreID,
     'msmt17': MSMT17,
     'viper': VIPeR,

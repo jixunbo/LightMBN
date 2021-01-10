@@ -26,6 +26,7 @@ class Engine():
 
         if torch.cuda.is_available():
             self.ckpt.write_log('[INFO] GPU: ' + torch.cuda.get_device_name(0))
+            # print(torch.backends.cudnn.benchmark)
 
         self.ckpt.write_log(
             '[INFO] Starting from epoch {}'.format(self.scheduler.last_epoch + 1))
@@ -53,7 +54,6 @@ class Engine():
 
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
-
             loss = self.loss.compute(outputs, labels)
 
             loss.backward()
@@ -64,6 +64,8 @@ class Engine():
                 batch + 1, len(self.train_loader),
                 self.loss.display_loss(batch)),
                 end='' if batch + 1 != len(self.train_loader) else '\n')
+            # if batch == 0:
+            #     break
 
         self.scheduler.step()
         self.loss.end_log(len(self.train_loader))
@@ -162,8 +164,6 @@ class Engine():
             inputs, pid, camid = self._parse_data_for_eval(d)
             input_img = inputs.to(self.device)
             outputs = self.model(input_img)
-            # print(outputs.shape)
-            # if args.feat_inference == 'after':
 
             f1 = outputs.data.cpu()
             # flip

@@ -14,5 +14,6 @@ from .prid import PRID
 from .cuhk02 import CUHK02
 from .cuhk03_detected import CUHK03_Detected
 from .cuhk03_labeled import CUHK03_Labeled
+from .cuhk03_splited import CUHK03_splited
 from .msmt17 import MSMT17
 from .mot17 import MOT17

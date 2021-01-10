@@ -77,7 +77,11 @@ class Market1501(ImageDataset):
             if pid == -1:
                 continue # junk images are just ignored
             pid_container.add(pid)
-        pid2label = {pid:label for label, pid in enumerate(pid_container)}
+        ####### modified #######
+        pid2label = {pid:label for label, pid in enumerate(sorted(pid_container))}
+        # pid2label = {pid:label for label, pid in enumerate(pid_container)}
+
+        ########################
 
         data = []
         for img_path in img_paths:
