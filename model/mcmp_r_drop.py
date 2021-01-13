@@ -1,127 +1,71 @@
+
+
 import copy
 
 import torch
 from torch import nn
+import torch.nn.functional as F
+import random
+import math
 from .osnet import osnet_x1_0, OSBlock
-from .attention import BatchDrop, BatchRandomErasing, PAM_Module, CAM_Module, SE_Module, Dual_Module
+from .attention import BatchDrop, BatchFeatureErase_Top, PAM_Module, CAM_Module, SE_Module, Dual_Module
 from .bnneck import BNNeck, BNNeck3
-from torch.nn import functional as F
-
+from torchvision.models.resnet import resnet50, Bottleneck
+from .resnet50_ibn import resnet50_ibn_a
 
 from torch.autograd import Variable
 
 
-class BatchDropTop(nn.Module):
-    def __init__(self, h_ratio):
-        super(BatchDropTop, self).__init__()
-        self.h_ratio = h_ratio
-
-    def forward(self, x, visdrop=False):
-        if self.training or visdrop:
-            b, c, h, w = x.size()
-            rh = round(self.h_ratio * h)
-            act = (x**2).sum(1)
-            act = act.view(b, h * w)
-            act = F.normalize(act, p=2, dim=1)
-            act = act.view(b, h, w)
-            max_act, _ = act.max(2)
-            ind = torch.argsort(max_act, 1)
-            ind = ind[:, -rh:]
-            mask = []
-            for i in range(b):
-                rmask = torch.ones(h)
-                rmask[ind[i]] = 0
-                mask.append(rmask.unsqueeze(0))
-            mask = torch.cat(mask)
-            mask = torch.repeat_interleave(mask, w, 1).view(b, h, w)
-            mask = torch.repeat_interleave(mask, c, 0).view(b, c, h, w)
-            if x.is_cuda:
-                mask = mask.cuda()
-            if visdrop:
-                return mask
-            x = x * mask
-        return x
-
-
-class BatchFeatureErase_Top(nn.Module):
-    def __init__(self, channels, h_ratio=0.33, w_ratio=1., double_bottleneck=False):
-        super(BatchFeatureErase_Top, self).__init__()
-        # if double_bottleneck:
-        #     self.drop_batch_bottleneck = nn.Sequential(
-        #         Bottleneck(channels, 512),
-        #         Bottleneck(channels, 512)
-        #     )
-        # else:
-        #     self.drop_batch_bottleneck = Bottleneck(channels, 512)
-        if double_bottleneck:
-            self.drop_batch_bottleneck = nn.Sequential(
-                OSBlock(channels, 512),
-                OSBlock(channels, 512)
-            )
-        else:
-            self.drop_batch_bottleneck = OSBlock(channels, 512)
-
-        # self.drop_batch_drop_basic = BatchDrop(h_ratio, w_ratio)
-        self.drop_batch_drop_top = BatchDropTop(h_ratio)
-
-    def forward(self, x, drop_top=True, bottleneck_features=True, visdrop=False):
-        features = self.drop_batch_bottleneck(x)
-        if drop_top:
-            x = self.drop_batch_drop_top(features, visdrop=visdrop)
-
-        # if drop_top:
-        #     x = self.drop_batch_drop_top(x, visdrop=visdrop)
-        # else:
-        #     x = self.drop_batch_drop_basic(features, visdrop=visdrop)
-        if visdrop:
-            return x  # x is dropmask
-        if bottleneck_features:
-            return x, features
-        else:
-            return x
-
-
-class MCMP_n_drop(nn.Module):
+class MCMP_r_drop(nn.Module):
     def __init__(self, args):
-        super(MCMP_n_drop, self).__init__()
+        super(MCMP_r_drop, self).__init__()
 
         self.n_ch = 2
-        self.chs = 512 // self.n_ch
+        self.chs = 2048 // self.n_ch
 
-        osnet = osnet_x1_0(pretrained=True)
+        # resnet = resnet50_ibn_a(last_stride=1, pretrained=True)
+
+        resnet = resnet50(pretrained=True)
 
         self.backone = nn.Sequential(
-            osnet.conv1,
-            osnet.maxpool,
-            osnet.conv2,
-            # attention,
-            osnet.conv3[0]
+            resnet.conv1,
+            resnet.bn1,
+            resnet.relu,
+            resnet.maxpool,
+            resnet.layer1,
+            resnet.layer2,
+            resnet.layer3[0],
         )
 
-        conv3 = osnet.conv3[1:]
+        conv3 = nn.Sequential(*resnet.layer3[1:])
+        no_downsample_conv4 = nn.Sequential(
+            Bottleneck(1024, 512, downsample=nn.Sequential(
+                nn.Conv2d(1024, 2048, 1, bias=False), nn.BatchNorm2d(2048))),
+            Bottleneck(2048, 512),
+            Bottleneck(2048, 512))
+        no_downsample_conv4.load_state_dict(resnet.layer4.state_dict())
 
         self.global_branch = nn.Sequential(copy.deepcopy(
-            conv3), copy.deepcopy(osnet.conv4), copy.deepcopy(osnet.conv5))
+            conv3), copy.deepcopy(resnet.layer4))
 
         self.partial_branch = nn.Sequential(copy.deepcopy(
-            conv3), copy.deepcopy(osnet.conv4), copy.deepcopy(osnet.conv5))
+            conv3), copy.deepcopy(no_downsample_conv4))
 
         self.channel_branch = nn.Sequential(copy.deepcopy(
-            conv3), copy.deepcopy(osnet.conv4), copy.deepcopy(osnet.conv5))
+            conv3), copy.deepcopy(no_downsample_conv4))
 
         self.global_pooling = nn.AdaptiveMaxPool2d((1, 1))
         self.partial_pooling = nn.AdaptiveAvgPool2d((2, 1))
-        self.channel_pooling = nn.AdaptiveAvgPool2d((1, 1))
+        self.channel_pooling = nn.AdaptiveMaxPool2d((1, 1))
+        self.avg_pooling = nn.AdaptiveAvgPool2d((1, 1))
 
-        reduction = BNNeck3(512, args.num_classes,
+        reduction = BNNeck3(2048, args.num_classes,
                             args.feats, return_f=True)
-        # reduction = BNNeck(
-        #     args.feats, args.num_classes, return_f=True)
         self.reduction_0 = copy.deepcopy(reduction)
         self.reduction_1 = copy.deepcopy(reduction)
         self.reduction_2 = copy.deepcopy(reduction)
         self.reduction_3 = copy.deepcopy(reduction)
-        self.reduction_4 = copy.deepcopy(reduction)
+        self.reduction_drop = copy.deepcopy(reduction)
 
         self.shared = nn.Sequential(nn.Conv2d(
             self.chs, args.feats, 1, bias=False), nn.BatchNorm2d(args.feats), nn.ReLU(True))
@@ -135,10 +79,8 @@ class MCMP_n_drop(nn.Module):
         # if args.drop_block:
         #     print('Using batch random erasing block.')
         #     self.batch_drop_block = BatchRandomErasing()
-        # print('Using batch drop block.')
-        # self.batch_drop_block = BatchDrop(
-        #     h_ratio=args.h_ratio, w_ratio=args.w_ratio)
-        self.batch_drop_block = BatchFeatureErase_Top(512)
+
+        self.batch_drop_block = BatchFeatureErase_Top(2048, Bottleneck)
 
         self.activation_map = args.activation_map
 
@@ -153,12 +95,6 @@ class MCMP_n_drop(nn.Module):
         cha = self.channel_branch(x)
 
         if self.activation_map:
-            glo_ = glo
-
-        if self.batch_drop_block is not None:
-            glo_drop, glo = self.batch_drop_block(glo)
-
-        if self.activation_map:
 
             _, _, h_par, _ = par.size()
 
@@ -166,43 +102,59 @@ class MCMP_n_drop(nn.Module):
             fmap_p1 = par[:, :, h_par // 2:, :]
             fmap_c0 = cha[:, :self.chs, :, :]
             fmap_c1 = cha[:, self.chs:, :, :]
-            print('activation_map')
 
-            return glo, glo_, fmap_c0, fmap_c1, fmap_p0, fmap_p1
+            return glo, fmap_c0, fmap_c1, fmap_p0, fmap_p1
+
+        if self.batch_drop_block is not None:
+            glo_drop, glo = self.batch_drop_block(glo)
 
         glo_drop = self.global_pooling(glo_drop)
-        glo = self.channel_pooling(glo)  # shape:(batchsize, 512,1,1)
-        g_par = self.global_pooling(par)  # shape:(batchsize, 512,1,1)
-        p_par = self.partial_pooling(par)  # shape:(batchsize, 512,3,1)
+        glo = self.avg_pooling(glo)
+        # glo = self.global_pooling(glo)  # shape:(batchsize, 2048,1,1)
+        g_par = self.global_pooling(par)  # shape:(batchsize, 2048,1,1)
+        p_par = self.partial_pooling(par)  # shape:(batchsize, 2048,3,1)
         cha = self.channel_pooling(cha)
 
         p0 = p_par[:, :, 0:1, :]
         p1 = p_par[:, :, 1:2, :]
-
+        # print(glo.shape)
         f_glo = self.reduction_0(glo)
         f_p0 = self.reduction_1(g_par)
         f_p1 = self.reduction_2(p0)
         f_p2 = self.reduction_3(p1)
-        f_glo_drop = self.reduction_4(glo_drop)
+        f_glo_drop = self.reduction_drop(glo_drop)
 
         ################
 
         c0 = cha[:, :self.chs, :, :]
         c1 = cha[:, self.chs:, :, :]
+        # print(c0.shape)
         c0 = self.shared(c0)
         c1 = self.shared(c1)
         f_c0 = self.reduction_ch_0(c0)
         f_c1 = self.reduction_ch_1(c1)
 
-        ################
+        # ################
 
+        # fea = [f_glo[-1], f_p0[-1]]
+
+        # if not self.training:
+        #     a1 = F.normalize(f_glo[0], p=2, dim=1)
+        #     a2 = F.normalize(f_p0[0], p=2, dim=1)
+        #     a3 = F.normalize(f_p1[0], p=2, dim=1)
+        #     a4 = F.normalize(f_p2[0], p=2, dim=1)
+
+        #     a5 = F.normalize(f_c0[0], p=2, dim=1)
+        #     a6 = F.normalize(f_c1[0], p=2, dim=1)
+
+        #     return torch.cat([a1, a2, a3, a4, a5, a6], 1)
+
+        # return [f_glo[1], f_p0[1], f_p1[1], f_p2[1], f_c0[1], f_c1[1]], fea
         fea = [f_glo[-1], f_p0[-1], f_glo_drop[-1]]
 
         if not self.training:
 
             return torch.stack([f_glo[0], f_glo_drop[0], f_p0[0], f_p1[0], f_p2[0], f_c0[0], f_c1[0]], dim=2)
-            # return torch.stack([f_glo_drop[0], f_p0[0], f_p1[0], f_p2[0], f_c0[0], f_c1[0]], dim=2)
-
 
         return [f_glo[1], f_glo_drop[1], f_p0[1], f_p1[1], f_p2[1], f_c0[1], f_c1[1]], fea
 
@@ -230,12 +182,13 @@ if __name__ == '__main__':
     parser.add_argument('--num_classes', type=int, default=751, help='')
     parser.add_argument('--bnneck', type=bool, default=True)
     parser.add_argument('--pool', type=str, default='max')
-    parser.add_argument('--feats', type=int, default=512)
+    parser.add_argument('--feats', type=int, default=256)
     parser.add_argument('--drop_block', type=bool, default=True)
     parser.add_argument('--w_ratio', type=float, default=1.0, help='')
+    parser.add_argument('--h_ratio', type=float, default=0.33, help='')
 
     args = parser.parse_args()
-    net = MCMP_n(args)
+    net = MCMP_r(args)
     # net.classifier = nn.Sequential()
     # print([p for p in net.parameters()])
     # a=filter(lambda p: p.requires_grad, net.parameters())

@@ -84,7 +84,7 @@ class checkpoint():
 
         with open(self.dir + '/config.yaml', open_type) as fp:
             dic = vars(args).copy()
-            del dic['load'], dic['save'], dic['pre_train'], dic['test_only'], dic['re_rank']
+            del dic['load'], dic['save'], dic['pre_train'], dic['test_only'], dic['re_rank'],dic['activation_map']
             yaml.dump(dic, fp, default_flow_style=False)
 
     # def save(self, trainer, epoch, is_best=False):

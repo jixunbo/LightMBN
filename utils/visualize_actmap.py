@@ -92,6 +92,8 @@ def visactmap(
                 #             outputs.dim()
                 #         )
                 #     )
+                # print(j)
+
                 n_fmaps = len(output)
                 # print(n_fmaps)/
                 grid_img = 255 * np.ones(
@@ -100,6 +102,8 @@ def visactmap(
                 # RGB image
                 if use_gpu:
                     imgs = imgs.cpu()
+                if j>= imgs.size()[0]:
+                    break
                 img = imgs[j, ...]
                 for t, m, s in zip(img, img_mean, img_std):
                     t.mul_(s).add_(m).clamp_(0, 1)
@@ -112,10 +116,13 @@ def visactmap(
                 imname = osp.basename(osp.splitext(path)[0])
                 # print(imname[:4])
                 # print()
-                if imname[:4] not in ['4117','4699','0580','0601']:
-                    continue
+                # if imname[:4] not in ['4117','4699','0580','0601']:
+                # if imname[:4] not in ['0101']:
 
-                # compute activation maps
+                #     continue
+
+                # compute activation maps]
+                # print(output)
                 for output_number, outputs in enumerate(output):
 
                     # outputs = (outputs**2).sum(1)
@@ -123,6 +130,7 @@ def visactmap(
                     # outputs = outputs.view(b, h * w)
                     # outputs = F.normalize(outputs, p=2, dim=1)
                     # outputs = outputs.view(b, h, w)
+                    # print(output)
                     # print(outputs.size())
                     outputs = (outputs**2).sum(0)
                     h, w = outputs.size()
@@ -132,9 +140,9 @@ def visactmap(
 
                     if outputs.size()[0]!=24:
                         z=torch.zeros(12,8).cuda()
-                        if output_number ==3:
+                        if output_number ==4:
                             outputs=torch.cat((outputs,z),0) 
-                        if output_number == 4 :
+                        if output_number == 5 :
                             outputs=torch.cat((z,outputs),0) 
                     # if outputs.size()[0]!=24:
                     #     z=torch.zeros(8,8)

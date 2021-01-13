@@ -82,6 +82,71 @@ class BatchRandomErasing(nn.Module):
         return img
 
 
+class BatchDropTop(nn.Module):
+    def __init__(self, h_ratio):
+        super(BatchDropTop, self).__init__()
+        self.h_ratio = h_ratio
+
+    def forward(self, x, visdrop=False):
+        if self.training or visdrop:
+            b, c, h, w = x.size()
+            rh = round(self.h_ratio * h)
+            act = (x**2).sum(1)
+            act = act.view(b, h * w)
+            act = F.normalize(act, p=2, dim=1)
+            act = act.view(b, h, w)
+            max_act, _ = act.max(2)
+            ind = torch.argsort(max_act, 1)
+            ind = ind[:, -rh:]
+            mask = []
+            for i in range(b):
+                rmask = torch.ones(h)
+                rmask[ind[i]] = 0
+                mask.append(rmask.unsqueeze(0))
+            mask = torch.cat(mask)
+            mask = torch.repeat_interleave(mask, w, 1).view(b, h, w)
+            mask = torch.repeat_interleave(mask, c, 0).view(b, c, h, w)
+            if x.is_cuda:
+                mask = mask.cuda()
+            if visdrop:
+                return mask
+            x = x * mask
+        return x
+
+
+class BatchFeatureErase_Top(nn.Module):
+    def __init__(self, channels, bottleneck_type, h_ratio=0.33, w_ratio=1., double_bottleneck=False):
+        super(BatchFeatureErase_Top, self).__init__()
+        # if double_bottleneck:
+        #     self.drop_batch_bottleneck = nn.Sequential(
+        #         Bottleneck(channels, 512),
+        #         Bottleneck(channels, 512)
+        #     )
+        # else:
+        #     self.drop_batch_bottleneck = Bottleneck(channels, 512)
+
+        self.drop_batch_bottleneck = bottleneck_type(channels, 512)
+
+        # self.drop_batch_drop_basic = BatchDrop(h_ratio, w_ratio)
+        self.drop_batch_drop_top = BatchDropTop(h_ratio)
+
+    def forward(self, x, drop_top=True, bottleneck_features=True, visdrop=False):
+        features = self.drop_batch_bottleneck(x)
+        if drop_top:
+            x = self.drop_batch_drop_top(features, visdrop=visdrop)
+
+        # if drop_top:
+        #     x = self.drop_batch_drop_top(x, visdrop=visdrop)
+        # else:
+        #     x = self.drop_batch_drop_basic(features, visdrop=visdrop)
+        if visdrop:
+            return x  # x is dropmask
+        if bottleneck_features:
+            return x, features
+        else:
+            return x
+
+
 class SE_Module(Module):
 
     def __init__(self, channels, reduction=4):
