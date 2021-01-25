@@ -60,13 +60,9 @@ class ResNet50(nn.Module):
                                      return_f=True)
             # self.classifier = BNNeck3(2048, args.num_classes, feat_dim=512,
             #  return_f=True)
-            # self.classifier = new_BNNeck(2048, args.num_classes, 256, return_f=True)
-            # print(args.num_classes)
 
         else:
 
-            # self.classifier = ClassBlock(
-            #     2048, args.num_classes,relu=True, return_f=True)
             self.classifier = ClassBlock(
                 2048, args.num_classes, num_bottleneck=args.feats, return_f=True)
 
@@ -96,7 +92,7 @@ class ResNet50(nn.Module):
             return x[0]
         # print(x[1].size())
         # print(x[-1].size())
-        return [x[1], x[-1]]
+        return [x[1]], [x[-1]]
 
 
 if __name__ == '__main__':

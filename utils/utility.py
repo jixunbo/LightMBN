@@ -13,6 +13,10 @@ from collections import OrderedDict
 from shutil import copyfile, copytree
 import pickle
 import warnings
+try:
+    import neptune
+except Exception:
+    print('Neptune is not installed.')
 
 ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -24,80 +28,68 @@ class checkpoint():
         self.since = datetime.datetime.now()
         now = datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
 
-        if args.load == '':
-            if args.save == '':
-                args.save = now
-            self.dir = ROOT_PATH + '/experiment/' + args.save
-
-            # Only works if using google drive
-            if ROOT_PATH[:8] == '/content':
-                self.model_save_dir = osp.join(
-                    ROOT_PATH, '..', '..', 'experiment' + args.save)
-            else:
-                self.model_save_dir = 'none'
-
-        else:
-            self.dir = ROOT_PATH + '/experiment/' + args.load
-            if not os.path.exists(self.dir):
-                args.load = ''
-            else:
-                # pass
-                # if args.resume != 0:
-                #     self.add_log(torch.tensor(
-                #         [args.resume, 0, 0, 0, 0, 0], dtype=torch.float32).reshape(1, 6))
-                # else:
-                #     self.log = torch.load(self.dir + '/map_log.pt')
-                if os.path.exists(self.dir + '/map_log.pt'):
-                    self.log = torch.load(self.dir + '/map_log.pt')
-                # print('Continue from epoch {}...'.format(
-                #     len(self.log) * args.test_every))
-
-        print('Experiment results will be saved in {} '.format(self.dir))
-
-        if args.reset:
-            os.system('rm -rf ' + self.dir)
-            args.load = ''
-
         def _make_dir(path):
             if not os.path.exists(path):
                 os.makedirs(path)
 
+        if args.load == '':
+            if args.save == '':
+                args.save = now
+            self.dir = ROOT_PATH + '/experiment/' + args.save
+        else:
+            self.dir = ROOT_PATH + '/experiment/' + args.load
+            if not os.path.exists(self.dir):
+                args.load = ''
+            args.save = args.load
+
+        ##### Only works when using google drive and colab #####
+        self.local_dir = None
+        if ROOT_PATH[:8] == '/content':
+
+            self.dir = osp.join('/content/drive/Shareddrives/Colab',
+                                self.dir[self.dir.find('experiment'):])
+            self.local_dir = ROOT_PATH + \
+                '/experiment/' + self.dir.split('/')[-1]
+            _make_dir(self.local_dir)
+        ############################################
+
         _make_dir(self.dir)
 
-        if not args.test_only:
+        if os.path.exists(self.dir + '/map_log.pt'):
+            self.log = torch.load(self.dir + '/map_log.pt')
 
-            # _make_dir(self.dir + '/model')
-            _make_dir(self.dir + '/scripts')
-
-            # copytree(os.path.join(ROOT_PATH, 'model'), self.dir + '/scripts/model' +
-            #          datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S'))
-            # copytree(os.path.join(ROOT_PATH, 'loss'), self.dir + '/scripts/loss' +
-            #          datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S'))
+        print('Experiment results will be saved in {} '.format(self.dir))
 
         open_type = 'a' if os.path.exists(self.dir + '/log.txt') else 'w'
         self.log_file = open(self.dir + '/log.txt', open_type)
-        with open(self.dir + '/config.txt', open_type) as f:
-            f.write(now + '\n\n')
-            for arg in vars(args):
-                f.write('{}: {}\n'.format(arg, getattr(args, arg)))
-            f.write('\n')
+
+        ######### For Neptune: ############
+
+        try:
+            # replaced with your project name and token
+            exp = neptune.init(args.nep_name, args.nep_token)
+            if args.load == '':
+                self.exp = exp.create_experiment(name=self.dir.split('/')[-1],
+                                                 # tags=['keras', 'vis'],
+                                                 # upload_source_files=['**/*.py', 'parameters.yaml'],
+                                                 params=vars(args))
+                args.nep_id = self.exp.id
+            else:
+                self.exp = exp.get_experiments(id=args.nep_id)[0]
+            print(self.exp.id)
+
+        except Exception:
+            pass
+
+        ###################################
 
         with open(self.dir + '/config.yaml', open_type) as fp:
             dic = vars(args).copy()
-            del dic['load'], dic['save'], dic['pre_train'], dic['test_only'], dic['re_rank'],dic['activation_map']
+            del dic['load'], dic['save'], dic['pre_train'], dic['test_only'], dic['re_rank'], dic['activation_map'], dic['nep_token']
             yaml.dump(dic, fp, default_flow_style=False)
 
-    # def save(self, trainer, epoch, is_best=False):
-    #     trainer.model.save(self.dir, epoch, is_best=is_best)
-    #     trainer.loss.save(self.dir)
-    #     # trainer.loss.plot_loss(self.dir, epoch)
-
-    #     self.plot_map_rank(epoch)
-    #     torch.save(self.log, os.path.join(self.dir, 'map_log.pt'))
-    #     torch.save({'state_dict': trainer.optimizer.state_dict(), 'epoch': epoch},
-    #                os.path.join(self.dir, 'model',
-    #                             'optimizer.pt')
-    #                )
+        copyfile(self.dir + '/config.yaml', self.local_dir +
+                 '/config.yaml') if self.local_dir is not None else None
 
     def add_log(self, log):
         self.log = torch.cat([self.log, log])
@@ -109,9 +101,30 @@ class checkpoint():
         print(log, end=end)
         if end != '':
             self.log_file.write(log + end)
+
+            ######### For Neptune: ############
+            try:
+                t = log.find('Total')
+                m = log.find('mAP')
+                r = log.find('rank1')
+
+                self.exp.log_metric('batch loss', float(
+                    log[t + 7:t + 12])) if t > -1 else None
+                self.exp.log_metric('mAP', float(
+                    log[m + 5:m + 11])) if m > -1 else None
+                self.exp.log_metric('rank1', float(
+                    log[r + 7:r + 13])) if r > -1 else None
+            except Exception:
+                pass
+            ###################################
+
         if refresh:
             self.log_file.close()
             self.log_file = open(self.dir + '/log.txt', 'a')
+
+            # For Google Drive
+            copyfile(self.dir + '/log.txt', self.local_dir +
+                     '/log.txt') if self.local_dir is not None else None
 
     def done(self):
         self.log_file.close()
@@ -129,7 +142,7 @@ class checkpoint():
         plt.xlabel('Epochs')
         plt.ylabel('mAP/rank')
         plt.grid(True)
-        plt.savefig('{}/test_{}.jpg'.format(self.dir, self.args.data_test))
+        plt.savefig('{}/result_{}.pdf'.format(self.dir, self.args.data_test), dpi=600)
         plt.close(fig)
 
     def save_results(self, filename, save_list, scale):
@@ -239,14 +252,14 @@ class checkpoint():
             state_dict = checkpoint
 
         model_dict = model.state_dict()
-        # print(model_dict.keys())
         new_state_dict = OrderedDict()
         matched_layers, discarded_layers = [], []
         for k, v in state_dict.items():
-            # print(k)
+
             if k.startswith('module.'):
                 k = 'model.' + k[7:]  # discard module.
-
+            if k.startswith('model.'):
+                k = k[6:]
             if k in model_dict and model_dict[k].size() == v.size():
 
                 new_state_dict[k] = v
@@ -298,7 +311,8 @@ class checkpoint():
         self.write_log('[INFO] Loading checkpoint from "{}"'.format(fpath))
         checkpoint = self.load_checkpoint(fpath)
 
-        model.load_state_dict(checkpoint['state_dict'])
+        # model.load_state_dict(checkpoint['state_dict'])
+        self.load_pretrained_weights(model, fpath)
         self.write_log('[INFO] Model weights loaded')
         if optimizer is not None and 'optimizer' in checkpoint.keys():
             optimizer.load_state_dict(checkpoint['optimizer'])

@@ -11,16 +11,8 @@ def make_optimizer(args, model):
         ignored_params = []
         for i in range(args.parts):
             name = 'classifier' + str(i)
-            c = getattr(model.model, name)
+            c = getattr(model, name)
             ignored_params = ignored_params + list(map(id, c.parameters()))
-
-        # ignored_params = (list(map(id, model.model.classifier0.parameters()))
-        #                   + list(map(id, model.model.classifier1.parameters()))
-        #                   # + list(map(id, model.model.classifier2.parameters()))
-        #                   # + list(map(id, model.model.classifier3.parameters()))
-        #                   # + list(map(id, model.model.classifier4.parameters()))
-        #                   # + list(map(id, model.model.classifier5.parameters())))
-        #                   )
 
         ignored_params = tuple(ignored_params)
 
@@ -108,7 +100,6 @@ def make_scheduler(args, optimizer, last_epoch):
 
         scheduler = WarmupCosineAnnealingLR(
             optimizer, multiplier=1, warmup_epoch=10, min_lr=args.lr / 1000, epochs=args.epochs, last_epoch=last_epoch)
-        # optimizer, multiplier=1, warmup_epoch=10, min_lr=3.5e-7, epochs=args.epochs, last_epoch=last_epoch)
 
         return scheduler
 

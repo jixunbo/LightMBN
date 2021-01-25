@@ -1,9 +1,7 @@
-import os
 import torch
 import numpy as np
-from scipy.spatial.distance import cdist
-from utils.functions import cmc, mean_ap, cmc_baseline, eval_liaoxingyu
-from utils.re_ranking import re_ranking
+from utils.functions import evaluation
+from utils.re_ranking import re_ranking, re_ranking_gpu
 
 
 class Engine():
@@ -26,16 +24,12 @@ class Engine():
 
         if torch.cuda.is_available():
             self.ckpt.write_log('[INFO] GPU: ' + torch.cuda.get_device_name(0))
-            # print(torch.backends.cudnn.benchmark)
 
         self.ckpt.write_log(
             '[INFO] Starting from epoch {}'.format(self.scheduler.last_epoch + 1))
 
-        # print(ckpt.log)
-        # print(self.scheduler._last_lr)
-
     def train(self):
-        # self.loss.step()
+
         epoch = self.scheduler.last_epoch
         lr = self.scheduler.get_last_lr()[0]
 
@@ -64,8 +58,6 @@ class Engine():
                 batch + 1, len(self.train_loader),
                 self.loss.display_loss(batch)),
                 end='' if batch + 1 != len(self.train_loader) else '\n')
-            # if batch == 0:
-            #     break
 
         self.scheduler.step()
         self.loss.end_log(len(self.train_loader))
@@ -77,8 +69,7 @@ class Engine():
         self.model.eval()
 
         self.ckpt.add_log(torch.zeros(1, 6))
-        # qf = self.extract_feature(self.query_loader,self.args).numpy()
-        # gf = self.extract_feature(self.test_loader,self.args).numpy()
+
         with torch.no_grad():
 
             qf, query_ids, query_cams = self.extract_feature(
@@ -87,45 +78,16 @@ class Engine():
                 self.test_loader, self.args)
 
         if self.args.re_rank:
-            q_g_dist = np.dot(qf, np.transpose(gf))
-            q_q_dist = np.dot(qf, np.transpose(qf))
-            g_g_dist = np.dot(gf, np.transpose(gf))
-            dist = re_ranking(q_g_dist, q_q_dist, g_g_dist)
+            # q_g_dist = np.dot(qf, np.transpose(gf))
+            # q_q_dist = np.dot(qf, np.transpose(qf))
+            # g_g_dist = np.dot(gf, np.transpose(gf))
+            # dist = re_ranking(q_g_dist, q_q_dist, g_g_dist)
+            dist = re_ranking_gpu(qf, gf, 20, 6, 0.3)
         else:
-            # dist = cdist(qf, gf,metric='cosine')
-
             # cosine distance
             dist = 1 - torch.mm(qf, gf.t()).cpu().numpy()
 
-            # m, n = qf.shape[0], gf.shape[0]
-            # dist = torch.pow(qf, 2).sum(dim=1, keepdim=True).expand(m, n) + \
-            #           torch.pow(gf, 2).sum(dim=1, keepdim=True).expand(n, m).t()
-            # dist.addmm_(1, -2, qf, gf.t())
-            # dist = dist.cpu().numpy()
-            # dist = np.dot(qf,np.transpose(gf))
-        # print('2')
-
-        # r = cmc(dist, self.queryset.ids, self.testset.ids, self.queryset.cameras, self.testset.cameras,
-        #         separate_camera_set=False,
-        #         single_gallery_shot=False,
-        #         first_match_break=True)
-        # m_ap = mean_ap(dist, self.queryset.ids, self.testset.ids,
-        #                self.queryset.cameras, self.testset.cameras)
-        # r = cmc(dist, query_label, gallery_label, query_cam, gallery_cam,
-        #         separate_camera_set=False,
-        #         single_gallery_shot=False,
-        #         first_match_break=True)
-        # m_ap = mean_ap(dist, query_label, gallery_label, query_cam, gallery_cam)
-        # r, m_ap = cmc_baseline(dist, query_label, gallery_label, query_cam, gallery_cam,
-        #         separate_camera_set=False,
-        #         single_gallery_shot=False,
-        #         first_match_break=True)
-        # r, m_ap = cmc_baseline(dist, query_ids, gallery_ids, query_cams, gallery_cams,
-        #                        separate_camera_set=False,
-        #                        single_gallery_shot=False,
-        #                        first_match_break=True)
-        # r,m_ap=eval_liaoxingyu(dist, query_label, gallery_label, query_cam, gallery_cam, 50)
-        r, m_ap = eval_liaoxingyu(
+        r, m_ap = evaluation(
             dist, query_ids, gallery_ids, query_cams, gallery_cams, 50)
 
         self.ckpt.log[-1, 0] = epoch
@@ -145,8 +107,7 @@ class Engine():
         )
 
         if not self.args.test_only:
-            # self.ckpt.save(self, epoch, is_best=(
-            #     self.ckpt.log[best[1][1], 0] == epoch))
+
             self._save_checkpoint(epoch, r[0], self.ckpt.dir, is_best=(
                 self.ckpt.log[best[1][1], 0] == epoch))
             self.ckpt.plot_map_rank(epoch)
@@ -173,35 +134,21 @@ class Engine():
             outputs = self.model(input_img)
             f2 = outputs.data.cpu()
 
-            # else:
-            #     f1 = outputs[-1].data.cpu()
-            #     # flip
-            #     inputs = inputs.index_select(
-            #         3, torch.arange(inputs.size(3) - 1, -1, -1))
-            #     input_img = inputs.to(self.device)
-            #     outputs = self.model(input_img)
-            #     f2 = outputs[-1].data.cpu()
-
             ff = f1 + f2
             if ff.dim() == 3:
                 fnorm = torch.norm(
                     ff, p=2, dim=1, keepdim=True)  # * np.sqrt(ff.shape[2])
                 ff = ff.div(fnorm.expand_as(ff))
                 ff = ff.view(ff.size(0), -1)
-                # ff = ff.view(ff.size(0), -1)
-                # fnorm = torch.norm(ff, p=2, dim=1, keepdim=True)
-                # ff = ff.div(fnorm.expand_as(ff))
 
             else:
                 fnorm = torch.norm(ff, p=2, dim=1, keepdim=True)
                 ff = ff.div(fnorm.expand_as(ff))
-                # pass
-            # fnorm = torch.norm(ff, p=2, dim=1, keepdim=True)
-            # ff = ff.div(fnorm.expand_as(ff))
+
             features = torch.cat((features, ff), 0)
             pids.extend(pid)
             camids.extend(camid)
-            # print(features.shape)
+
         return features, np.asarray(pids), np.asarray(camids)
 
     def terminate(self):

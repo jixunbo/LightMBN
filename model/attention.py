@@ -1,45 +1,15 @@
-###########################################################################
-# Created by: CASIA IVA
-# Email: jliu@nlpr.ia.ac.cn
-# Copyright (c) 2018
-
-# Reference: Dual Attention Network for Scene Segmentation
-# https://arxiv.org/pdf/1809.02983.pdf
-# https://github.com/junfu1115/DANet/blob/master/encoding/nn/attention.py
-###########################################################################
-
-import numpy as np
 import torch
 import math
 import random
 from torch.nn import Module, Sequential, Conv2d, ReLU, AdaptiveMaxPool2d, AdaptiveAvgPool2d, \
     NLLLoss, BCELoss, CrossEntropyLoss, AvgPool2d, MaxPool2d, Parameter, Linear, Sigmoid, Softmax, Dropout, Embedding
 from torch.nn import functional as F
-from torch.autograd import Variable
 from torch import nn
 
 torch_ver = torch.__version__[:3]
 
-__all__ = ['BatchDrop', 'BatchRandomErasing','PAM_Module', 'CAM_Module', 'Dual_Module', 'SE_Module']
-
-
-class BatchDrop(nn.Module):
-    def __init__(self, h_ratio, w_ratio):
-        super(BatchDrop, self).__init__()
-        self.h_ratio = h_ratio
-        self.w_ratio = w_ratio
-
-    def forward(self, x):
-        if self.training:
-            h, w = x.size()[-2:]
-            rh = round(self.h_ratio * h)
-            rw = round(self.w_ratio * w)
-            sx = random.randint(0, h - rh)
-            sy = random.randint(0, w - rw)
-            mask = x.new_ones(x.size())
-            mask[:, :, sx:sx + rh, sy:sy + rw] = 0
-            x = x * mask
-        return x
+__all__ = ['BatchDrop', 'BatchFeatureErase_Top', 'BatchRandomErasing',
+           'PAM_Module', 'CAM_Module', 'Dual_Module', 'SE_Module']
 
 
 class BatchRandomErasing(nn.Module):
@@ -72,17 +42,49 @@ class BatchRandomErasing(nn.Module):
                     x1 = random.randint(0, img.size()[2] - h)
                     y1 = random.randint(0, img.size()[3] - w)
                     if img.size()[1] == 3:
-                        img[:,0, x1:x1 + h, y1:y1 + w] = self.mean[0]
-                        img[:,1, x1:x1 + h, y1:y1 + w] = self.mean[1]
-                        img[:,2, x1:x1 + h, y1:y1 + w] = self.mean[2]
+                        img[:, 0, x1:x1 + h, y1:y1 + w] = self.mean[0]
+                        img[:, 1, x1:x1 + h, y1:y1 + w] = self.mean[1]
+                        img[:, 2, x1:x1 + h, y1:y1 + w] = self.mean[2]
                     else:
-                        img[:,0, x1:x1 + h, y1:y1 + w] = self.mean[0]
+                        img[:, 0, x1:x1 + h, y1:y1 + w] = self.mean[0]
                     return img
 
         return img
 
 
+class BatchDrop(nn.Module):
+    """
+    Ref: Batch DropBlock Network for Person Re-identification and Beyond
+    https://github.com/daizuozhuo/batch-dropblock-network/blob/master/models/networks.py
+    Created by: daizuozhuo
+    """
+
+    def __init__(self, h_ratio, w_ratio):
+        super(BatchDrop, self).__init__()
+        self.h_ratio = h_ratio
+        self.w_ratio = w_ratio
+
+    def forward(self, x):
+        if self.training:
+            h, w = x.size()[-2:]
+            rh = round(self.h_ratio * h)
+            rw = round(self.w_ratio * w)
+            sx = random.randint(0, h - rh)
+            sy = random.randint(0, w - rw)
+            mask = x.new_ones(x.size())
+            mask[:, :, sx:sx + rh, sy:sy + rw] = 0
+            x = x * mask
+        return x
+
+
 class BatchDropTop(nn.Module):
+    """
+    Ref: Top-DB-Net: Top DropBlock for Activation Enhancement in Person Re-Identification
+    https://github.com/RQuispeC/top-dropblock/blob/master/torchreid/models/bdnet.py
+    Created by: RQuispeC
+
+    """
+
     def __init__(self, h_ratio):
         super(BatchDropTop, self).__init__()
         self.h_ratio = h_ratio
@@ -115,30 +117,28 @@ class BatchDropTop(nn.Module):
 
 
 class BatchFeatureErase_Top(nn.Module):
+    """
+    Ref: Top-DB-Net: Top DropBlock for Activation Enhancement in Person Re-Identification
+    https://github.com/RQuispeC/top-dropblock/blob/master/torchreid/models/bdnet.py
+    Created by: RQuispeC
+
+    """
+
     def __init__(self, channels, bottleneck_type, h_ratio=0.33, w_ratio=1., double_bottleneck=False):
         super(BatchFeatureErase_Top, self).__init__()
-        # if double_bottleneck:
-        #     self.drop_batch_bottleneck = nn.Sequential(
-        #         Bottleneck(channels, 512),
-        #         Bottleneck(channels, 512)
-        #     )
-        # else:
-        #     self.drop_batch_bottleneck = Bottleneck(channels, 512)
 
         self.drop_batch_bottleneck = bottleneck_type(channels, 512)
 
-        # self.drop_batch_drop_basic = BatchDrop(h_ratio, w_ratio)
+        self.drop_batch_drop_basic = BatchDrop(h_ratio, w_ratio)
         self.drop_batch_drop_top = BatchDropTop(h_ratio)
 
     def forward(self, x, drop_top=True, bottleneck_features=True, visdrop=False):
         features = self.drop_batch_bottleneck(x)
+
         if drop_top:
             x = self.drop_batch_drop_top(features, visdrop=visdrop)
-
-        # if drop_top:
-        #     x = self.drop_batch_drop_top(x, visdrop=visdrop)
-        # else:
-        #     x = self.drop_batch_drop_basic(features, visdrop=visdrop)
+        else:
+            x = self.drop_batch_drop_basic(features, visdrop=visdrop)
         if visdrop:
             return x  # x is dropmask
         if bottleneck_features:
@@ -244,6 +244,15 @@ class CAM_Module(Module):
 
 
 class Dual_Module(Module):
+    """
+    # Created by: CASIA IVA
+    # Email: jliu@nlpr.ia.ac.cn
+    # Copyright (c) 2018
+
+    # Reference: Dual Attention Network for Scene Segmentation
+    # https://arxiv.org/pdf/1809.02983.pdf
+    # https://github.com/junfu1115/DANet/blob/master/encoding/nn/attention.py
+    """
 
     def __init__(self, in_dim):
         super(Dual_Module).__init__()
@@ -255,5 +264,3 @@ class Dual_Module(Module):
         out1 = self.pam(x)
         out2 = self.cam(x)
         return out1 + out2
-
-

@@ -94,7 +94,7 @@ def visualize_ranked_results(
                 osp.basename(src)
             )
             shutil.copy(src, dst)
-    num_q =200
+    # num_q =200
 
 
     for q_idx in range(num_q):

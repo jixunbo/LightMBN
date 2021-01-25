@@ -193,8 +193,10 @@ def cmc_baseline(distmat, query_ids=None, gallery_ids=None,
     return CMC, mAP
 
 
-def eval_liaoxingyu(distmat, q_pids, g_pids, q_camids, g_camids, max_rank):
-    """Evaluation with market1501 metric
+def evaluation(distmat, q_pids, g_pids, q_camids, g_camids, max_rank):
+    """
+    Written by Liao Xingyu
+    Evaluation with market1501 metric
     Key: for each query identity, its gallery images from the same camera view are discarded.
     """
     num_q, num_g = distmat.shape

@@ -1,10 +1,10 @@
 import data_v1
 import data_v2
-import loss
-import model
-import optim
-import engine_v1
-import engine_v2
+from loss import make_loss
+from model import make_model
+from optim import make_optimizer, make_scheduler
+# import engine_v1
+# import engine_v2
 import engine_v3
 import os.path as osp
 from option import args
@@ -25,10 +25,9 @@ torch.backends.cudnn.benchmark = True
 # loader = data.Data(args)
 ckpt = utility.checkpoint(args)
 loader = data_v2.ImageDataManager(args)
-model = model.Model(args, ckpt)
-optimzer = optim.make_optimizer(args, model)
-loss = loss.make_loss(args, ckpt) if not args.test_only else None
-
+model = make_model(args, ckpt)
+optimzer = make_optimizer(args, model)
+loss = make_loss(args, ckpt) if not args.test_only else None
 
 start = -1
 if args.load != '':
@@ -38,7 +37,7 @@ if args.load != '':
 if args.pre_train != '':
     ckpt.load_pretrained_weights(model, args.pre_train)
 
-scheduler = optim.make_scheduler(args, optimzer, start)
+scheduler = make_scheduler(args, optimzer, start)
 
 # print('[INFO] System infomation: \n {}'.format(get_pretty_env_info()))
 ckpt.write_log('[INFO] Model parameters: {com[0]} flops: {com[1]}'.format(com=compute_model_complexity(model, (1, 3, args.height, args.width))

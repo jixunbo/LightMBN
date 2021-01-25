@@ -353,7 +353,7 @@ def init_pretrained_weights(model, key=''):
     cached_file = os.path.join(model_dir, filename)
 
     if not os.path.exists(cached_file):
-        gdown.download(pretrained_urls[key], cached_file, quiet=False)
+        gdown.download(pretrained_urls[key], cached_file, quiet=True)
 
     state_dict = torch.load(cached_file)
     model_dict = model.state_dict()

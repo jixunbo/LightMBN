@@ -6,87 +6,22 @@ import torch.nn.functional as F
 import random
 import math
 from .osnet import osnet_x1_0, OSBlock
-from .attention import PAM_Module, CAM_Module, SE_Module, Dual_Module
+from .attention import BatchDrop, BatchRandomErasing, PAM_Module, CAM_Module, SE_Module, Dual_Module
 from .bnneck import BNNeck, BNNeck3
 
 from torch.autograd import Variable
-
-
-class BatchDrop(nn.Module):
-    def __init__(self, h_ratio, w_ratio):
-        super(BatchDrop, self).__init__()
-        self.h_ratio = h_ratio
-        self.w_ratio = w_ratio
-
-    def forward(self, x):
-        if self.training:
-            h, w = x.size()[-2:]
-            rh = round(self.h_ratio * h)
-            rw = round(self.w_ratio * w)
-            sx = random.randint(0, h - rh)
-            sy = random.randint(0, w - rw)
-            mask = x.new_ones(x.size())
-            mask[:, :, sx:sx + rh, sy:sy + rw] = 0
-            x = x * mask
-        return x
-
-
-class BatchRandomErasing(nn.Module):
-    def __init__(self, probability=0.5, sl=0.02, sh=0.4, r1=0.3, mean=[0.4914, 0.4822, 0.4465]):
-        super(BatchRandomErasing, self).__init__()
-
-        self.probability = probability
-        self.mean = mean
-        self.sl = sl
-        self.sh = sh
-        self.r1 = r1
-
-    def forward(self, img):
-        if self.training:
-
-            if random.uniform(0, 1) > self.probability:
-                return img
-
-            for attempt in range(100):
-
-                area = img.size()[2] * img.size()[3]
-
-                target_area = random.uniform(self.sl, self.sh) * area
-                aspect_ratio = random.uniform(self.r1, 1 / self.r1)
-
-                h = int(round(math.sqrt(target_area * aspect_ratio)))
-                w = int(round(math.sqrt(target_area / aspect_ratio)))
-
-                if w < img.size()[3] and h < img.size()[2]:
-                    x1 = random.randint(0, img.size()[2] - h)
-                    y1 = random.randint(0, img.size()[3] - w)
-                    if img.size()[1] == 3:
-                        img[:, 0, x1:x1 + h, y1:y1 + w] = self.mean[0]
-                        img[:, 1, x1:x1 + h, y1:y1 + w] = self.mean[1]
-                        img[:, 2, x1:x1 + h, y1:y1 + w] = self.mean[2]
-                    else:
-                        img[:, 0, x1:x1 + h, y1:y1 + w] = self.mean[0]
-                    return img
-
-        return img
 
 
 class P(nn.Module):
     def __init__(self, args):
         super(P, self).__init__()
 
-        # self.n_ch = 2
-        # self.chs = 512 // self.n_ch
-
         osnet = osnet_x1_0(pretrained=True)
-        # attention = CAM_Module(256)
-        # attention = SE_Module(256)
 
         self.backone = nn.Sequential(
             osnet.conv1,
             osnet.maxpool,
             osnet.conv2,
-            # attention,
             osnet.conv3[0]
         )
 

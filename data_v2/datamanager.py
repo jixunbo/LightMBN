@@ -150,7 +150,7 @@ class ImageDataManager(DataManager):
         batch_size_test = args.batchtest
         workers = args.nThread
         train_sampler = 'random'
-        cuhk03_labeled = False
+        cuhk03_labeled = args.cuhk03_labeled
         cuhk03_classic_split = False
         market1501_500k = False
 

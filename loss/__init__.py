@@ -20,7 +20,7 @@ from loss.center_loss import CenterLoss
 class LossFunction():
     def __init__(self, args, ckpt):
         super(LossFunction, self).__init__()
-        print('[INFO] Making loss...')
+        ckpt.write_log('[INFO] Making loss...')
 
         self.nGPU = args.nGPU
         self.args = args
@@ -29,17 +29,16 @@ class LossFunction():
             weight, loss_type = loss.split('*')
             if loss_type == 'CrossEntropy':
                 if args.if_labelsmooth:
-                    # print(args.num_classes)
                     loss_function = CrossEntropyLabelSmooth(
                         num_classes=args.num_classes)
-                    # print('Label smooth on')
+                    ckpt.write_log('[INFO] Label Smoothing On.')
                 else:
                     loss_function = nn.CrossEntropyLoss()
             elif loss_type == 'Triplet':
                 loss_function = TripletLoss(args.margin)
             elif loss_type == 'GroupLoss':
                 loss_function = GroupLoss(
-                    T=args.T, num_classes=args.num_classes, num_anchors=args.num_anchors)
+                    total_classes=args.num_classes, max_iter=args.T, num_anchors=args.num_anchors)
             elif loss_type == 'MSLoss':
                 loss_function = MultiSimilarityLoss(margin=args.margin)
             elif loss_type == 'Focal':
@@ -50,17 +49,6 @@ class LossFunction():
                 loss_function = CenterLoss(
                     num_classes=args.num_classes, feat_dim=args.feats)
 
-            # elif loss_type == 'Mix':
-            #     self.fl = FocalLoss(reduction='mean')
-            #     if args.if_labelsmooth:
-            #         self.ce = CrossEntropyLabelSmooth(
-            #             num_classes=args.num_classes)
-            #         print('Label smooth on')
-            #     else:
-            #         self.ce = nn.CrossEntropyLoss()
-
-            #     self.tri = TripletLoss(args.margin)
-
             self.loss.append({
                 'type': loss_type,
                 'weight': float(weight),
@@ -70,37 +58,17 @@ class LossFunction():
         if len(self.loss) > 1:
             self.loss.append({'type': 'Total', 'weight': 0, 'function': None})
 
-        # for l in self.loss:
-        #     if l['function'] is not None:
-        #         print('{:.3f} * {}'.format(l['weight'], l['type']))
-        #         self.loss_module.append(l['function'])
-
         self.log = torch.Tensor()
-        # self.start_log()
-        # print(self.log,'kkkk')
-
-        # device = torch.device('cpu' if args.cpu else 'cuda')
-        # self.loss_module.to(device)
-
-        # # if args.load != '':
-        # #     self.load(ckpt.dir, cpu=args.cpu)
-        # if not args.cpu and args.nGPU > 1:
-        #     self.loss_module = nn.DataParallel(
-        #         self.loss_module, range(args.nGPU)
-        #     )
 
     def compute(self, outputs, labels):
         losses = []
-        # print(self.log, 'iiuu')
-        # print(self.loss,'oooooo')
+
         for i, l in enumerate(self.loss):
-            # print(i,'iiiiii')
             if l['type'] in ['CrossEntropy']:
 
                 if isinstance(outputs[0], list):
                     loss = [l['function'](output, labels)
                             for output in outputs[0]]
-                    # print(loss)
                 elif isinstance(outputs[0], torch.Tensor):
                     loss = [l['function'](outputs[0], labels)]
                 else:
@@ -110,18 +78,28 @@ class LossFunction():
                 loss = sum(loss)
                 effective_loss = l['weight'] * loss
                 losses.append(effective_loss)
-                # print(self.log,'llllog')
-                # print(self.log.device)
+
                 self.log[-1, i] += effective_loss.item()
 
             elif l['type'] in ['Triplet', 'MSLoss']:
-                # print('ppppppppp')
                 if isinstance(outputs[-1], list):
-                    # print('99999999')
                     loss = [l['function'](output, labels)
                             for output in outputs[-1]]
                 elif isinstance(outputs[-1], torch.Tensor):
-                    # print('6666666666')
+                    loss = [l['function'](outputs[-1], labels)]
+                else:
+                    raise TypeError(
+                        'Unexpected type: {}'.format(type(outputs[-1])))
+                loss = sum(loss)
+                effective_loss = l['weight'] * loss
+                losses.append(effective_loss)
+                self.log[-1, i] += effective_loss.item()
+
+            elif l['type'] in ['GroupLoss']:
+                if isinstance(outputs[-1], list):
+                    loss = [l['function'](output[0], labels, output[1])
+                            for output in zip(outputs[-1], outputs[0][:3])]
+                elif isinstance(outputs[-1], torch.Tensor):
                     loss = [l['function'](outputs[-1], labels)]
                 else:
                     raise TypeError(
@@ -176,8 +154,7 @@ class LossFunction():
             label = '{} Loss'.format(l['type'])
             fig = plt.figure()
             plt.title(label)
-            # print(self.log[:, i].numpy(), label)
-            # print(axis)
+
             plt.plot(axis, self.log[:, i].numpy(), label=label)
             plt.legend()
             plt.xlabel('Epochs')

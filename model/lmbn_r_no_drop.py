@@ -16,9 +16,9 @@ from .resnet50_ibn import resnet50_ibn_a
 from torch.autograd import Variable
 
 
-class MCMP_r(nn.Module):
+class LMBN_r_no_drop(nn.Module):
     def __init__(self, args):
-        super(MCMP_r, self).__init__()
+        super(LMBN_r_no_drop, self).__init__()
 
         self.n_ch = 2
         self.chs = 2048 // self.n_ch

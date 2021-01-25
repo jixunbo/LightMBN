@@ -3,15 +3,17 @@ import copy
 import torch
 from torch import nn
 from .osnet import osnet_x1_0, OSBlock
-from .attention import BatchDrop, BatchRandomErasing, PAM_Module, CAM_Module, SE_Module, Dual_Module
-from .bnneck import BNNeck, BNNeck3
+from .attention import BatchDrop, BatchFeatureErase_Top, PAM_Module, CAM_Module, SE_Module, Dual_Module
+from .bnneck import BNNeck, BNNeck3, ClassBlock
 from torch.nn import functional as F
+
+
 from torch.autograd import Variable
 
 
-class MCMP_n(nn.Module):
+class LMBN_n_drop_no_bnneck(nn.Module):
     def __init__(self, args):
-        super(MCMP_n, self).__init__()
+        super(LMBN_n_drop_no_bnneck, self).__init__()
 
         self.n_ch = 2
         self.chs = 512 // self.n_ch
@@ -22,7 +24,6 @@ class MCMP_n(nn.Module):
             osnet.conv1,
             osnet.maxpool,
             osnet.conv2,
-            # attention,
             osnet.conv3[0]
         )
 
@@ -41,31 +42,31 @@ class MCMP_n(nn.Module):
         self.partial_pooling = nn.AdaptiveAvgPool2d((2, 1))
         self.channel_pooling = nn.AdaptiveAvgPool2d((1, 1))
 
-        reduction = BNNeck3(512, args.num_classes,
-                            args.feats, return_f=True)
+        reduction = ClassBlock(512, args.num_classes,
+                               num_bottleneck=args.feats, return_f=True)
+
         self.reduction_0 = copy.deepcopy(reduction)
         self.reduction_1 = copy.deepcopy(reduction)
         self.reduction_2 = copy.deepcopy(reduction)
         self.reduction_3 = copy.deepcopy(reduction)
+        self.reduction_4 = copy.deepcopy(reduction)
 
         self.shared = nn.Sequential(nn.Conv2d(
             self.chs, args.feats, 1, bias=False), nn.BatchNorm2d(args.feats), nn.ReLU(True))
         self.weights_init_kaiming(self.shared)
 
-        self.reduction_ch_0 = BNNeck(
-            args.feats, args.num_classes, return_f=True)
-        self.reduction_ch_1 = BNNeck(
-            args.feats, args.num_classes, return_f=True)
+        self.reduction_ch_0 = ClassBlock(
+            args.feats, args.num_classes, linear=False, return_f=True)
+        self.reduction_ch_1 = ClassBlock(
+            args.feats, args.num_classes, linear=False, return_f=True)
 
         # if args.drop_block:
         #     print('Using batch random erasing block.')
         #     self.batch_drop_block = BatchRandomErasing()
-        if args.drop_block:
-            # print('Using batch drop block.')
-            self.batch_drop_block = BatchDrop(
-                h_ratio=args.h_ratio, w_ratio=args.w_ratio)
-        else:
-            self.batch_drop_block = None
+        # print('Using batch drop block.')
+        # self.batch_drop_block = BatchDrop(
+        #     h_ratio=args.h_ratio, w_ratio=args.w_ratio)
+        self.batch_drop_block = BatchFeatureErase_Top(512, OSBlock)
 
         self.activation_map = args.activation_map
 
@@ -80,6 +81,12 @@ class MCMP_n(nn.Module):
         cha = self.channel_branch(x)
 
         if self.activation_map:
+            glo_ = glo
+
+        if self.batch_drop_block is not None:
+            glo_drop, glo = self.batch_drop_block(glo)
+
+        if self.activation_map:
 
             _, _, h_par, _ = par.size()
 
@@ -89,14 +96,12 @@ class MCMP_n(nn.Module):
             fmap_c1 = cha[:, self.chs:, :, :]
             print('activation_map')
 
-            return glo, fmap_c0, fmap_c1, fmap_p0, fmap_p1
+            return glo, glo_, fmap_c0, fmap_c1, fmap_p0, fmap_p1
 
-        if self.batch_drop_block is not None:
-            glo = self.batch_drop_block(glo)
-
-        glo = self.global_pooling(glo)  # shape:(batchsize, 2048,1,1)
-        g_par = self.global_pooling(par)  # shape:(batchsize, 2048,1,1)
-        p_par = self.partial_pooling(par)  # shape:(batchsize, 2048,3,1)
+        glo_drop = self.global_pooling(glo_drop)
+        glo = self.channel_pooling(glo)  # shape:(batchsize, 512,1,1)
+        g_par = self.global_pooling(par)  # shape:(batchsize, 512,1,1)
+        p_par = self.partial_pooling(par)  # shape:(batchsize, 512,3,1)
         cha = self.channel_pooling(cha)
 
         p0 = p_par[:, :, 0:1, :]
@@ -106,6 +111,7 @@ class MCMP_n(nn.Module):
         f_p0 = self.reduction_1(g_par)
         f_p1 = self.reduction_2(p0)
         f_p2 = self.reduction_3(p1)
+        f_glo_drop = self.reduction_4(glo_drop)
 
         ################
 
@@ -118,13 +124,13 @@ class MCMP_n(nn.Module):
 
         ################
 
-        fea = [f_glo[-1], f_p0[-1]]
+        fea = [f_glo[-1], f_p0[-1], f_glo_drop[-1]]
 
         if not self.training:
 
-            return torch.stack([f_glo[0], f_p0[0], f_p1[0], f_p2[0], f_c0[0], f_c1[0]], dim=2)
+            return torch.stack([f_glo[0], f_glo_drop[0], f_p0[0], f_p1[0], f_p2[0], f_c0[0], f_c1[0]], dim=2)
 
-        return [f_glo[1], f_p0[1], f_p1[1], f_p2[1], f_c0[1], f_c1[1]], fea
+        return [f_glo[1], f_glo_drop[1], f_p0[1], f_p1[1], f_p2[1], f_c0[1], f_c1[1]], fea
 
     def weights_init_kaiming(self, m):
         classname = m.__class__.__name__
