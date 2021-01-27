@@ -109,7 +109,7 @@ class LMBN_r(nn.Module):
             glo_drop, glo = self.batch_drop_block(glo)
 
         glo_drop = self.global_pooling(glo_drop)
-        glo = self.avg_pooling(glo)
+        glo = self.global_pooling(glo)
         # glo = self.global_pooling(glo)  # shape:(batchsize, 2048,1,1)
         g_par = self.global_pooling(par)  # shape:(batchsize, 2048,1,1)
         p_par = self.partial_pooling(par)  # shape:(batchsize, 2048,3,1)
@@ -150,7 +150,7 @@ class LMBN_r(nn.Module):
         #     return torch.cat([a1, a2, a3, a4, a5, a6], 1)
 
         # return [f_glo[1], f_p0[1], f_p1[1], f_p2[1], f_c0[1], f_c1[1]], fea
-        fea = [f_glo[-1], f_p0[-1], f_glo_drop[-1]]
+        fea = [f_glo[-1], f_glo_drop[-1], f_p0[-1]]
 
         if not self.training:
 

@@ -1,9 +1,7 @@
 #  Lightweight Multi-Branch Network for Person Re-Identification
 
-Pytorch implementation for the paper [Lightweight Multi-Branch Network for Person Re-Identification]
-<!-- (https://arxiv.org/).  -->
-
-![](/utils/LightMBN.png)
+Pytorch implementation for the paper "Lightweight Multi-Branch Network for Person Re-Identification" [![Paper](https://img.shields.io/badge/arXiv-2101.10774-important)](https://arxiv.org/abs/2101.10774)
+![](/utils/LightMB.png)
 
 This repo supports
 - [x] easy dataset preparation, including Market-1501, DukeMTMC-ReID, CUHK03, MOT17...
@@ -71,15 +69,16 @@ Note that, the option '--datadir' is the dataset root, which contains folder Mar
 Actually, for the LightMBN model we have two kinds of backbone, LMBN_r we use ResNet50 as backbone, while LMBN_n is OSNet, OSNet contrains much less parameters but could achieve a little bit better performance than ResNet50.
 
 ### Results
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/lightweight-multi-branch-network-for-person/person-re-identification-on-cuhk03-labeled)](https://paperswithcode.com/sota/person-re-identification-on-cuhk03-labeled?p=lightweight-multi-branch-network-for-person)
 | Model | Market1501 | DukeMTMC-reID | CUHK03-D | CUHK03-L |
 | --- | -- | -- | --- | --- |
 | LightMBN(OSNet) | 96.3 (91.5) | 92.1 (83.7) | 85.4(82.6) | 87.2(85.1) |
-| LightMBN(ResNet) | 96.1 (90.4) |  90.5 (82.2) | 81.0(79.2) | 85.2(83.5) |
+| LightMBN(ResNet) | 96.1 (90.5) |  90.5 (82.0) | 81.0(79.2) | 83.7(82.5) |
 | BoT | 94.2 (85.4) |  86.7 (75.8) |  |  |
 | PCB | 95.1 (86.3) |  87.6 (76.6) |  |  |
 | MGN | 94.7 (87.5) | 88.7 (79.4) |  |  |
 
-Note, Rank-1(mAP), the results are produced by our repo without re-ranking, models and configurations may differ from original paper.
+Note, Rank-1(mAP), the results are produced by our repo **without re-ranking**, models and configurations may differ from original paper.
 
 Additionally, the evaluation metric method is the same as bag of tricks [repo](https://github.com/michuanhaohao/reid-strong-baseline/blob/master/utils/reid_metric.py).
 

@@ -18,8 +18,6 @@ try:
 except Exception:
     print('Neptune is not installed.')
 
-ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-
 
 class checkpoint():
     def __init__(self, args):
@@ -31,6 +29,9 @@ class checkpoint():
         def _make_dir(path):
             if not os.path.exists(path):
                 os.makedirs(path)
+
+        ROOT_PATH = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '..'))
 
         if args.load == '':
             if args.save == '':
@@ -44,7 +45,7 @@ class checkpoint():
 
         ##### Only works when using google drive and colab #####
         self.local_dir = None
-        if ROOT_PATH[:8] == '/content':
+        if ROOT_PATH[:11] == '/content/dr':
 
             self.dir = osp.join('/content/drive/Shareddrives/Colab',
                                 self.dir[self.dir.find('experiment'):])
@@ -142,7 +143,8 @@ class checkpoint():
         plt.xlabel('Epochs')
         plt.ylabel('mAP/rank')
         plt.grid(True)
-        plt.savefig('{}/result_{}.pdf'.format(self.dir, self.args.data_test), dpi=600)
+        plt.savefig('{}/result_{}.pdf'.format(self.dir,
+                                              self.args.data_test), dpi=600)
         plt.close(fig)
 
     def save_results(self, filename, save_list, scale):
