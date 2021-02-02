@@ -1,14 +1,10 @@
 #  Lightweight Multi-Branch Network for Person Re-Identification
 
 Pytorch implementation for the paper "Lightweight Multi-Branch Network for Person Re-Identification" [![Paper](https://img.shields.io/badge/arXiv-2101.10774-important)](https://arxiv.org/abs/2101.10774)
+
 ![](/utils/LightMB.png)
 
-This repo supports
-- [x] easy dataset preparation, including Market-1501, DukeMTMC-ReID, CUHK03, MOT17...
-- [x] sota deep neural networks and various options(tricks) for reid
-- [x] easy combination of different kinds of loss function
-- [x] end-to-end training and evaluation
-- [x] less package requirements
+This repo supports easy dataset preparation, including Market-1501, DukeMTMC-ReID, CUHK03, MOT17, sota deep neural networks and various options(tricks) for reid, easy combination of different kinds of loss function, end-to-end training and evaluation and less package requirements.
 
 List of functions
 - Warm up cosine annealing learning rate
@@ -21,6 +17,7 @@ List of functions
 - Focal loss
 - Center loss
 - Ranked list loss
+- Group Loss
 - Different optimizers
 - Attention modules
 - BNNeck
@@ -47,7 +44,7 @@ to download Market-1501, DukeMTMC, CUHK03 and MOT17.
 To inplement our Lightweight Multi-Branch Network with Multi-Similarity loss, run
 
 ```
-python [path to repo]/main.py --datadir [path to datasets] --data_train market1501 --data_test market1501 --model LMBN_n --batchid 6 --batchimage 8 --batchtest 32 --test_every 20 --epochs 110 --loss 0.5*CrossEntropy+0.5*MSLoss --margin 0.7 --nGPU 1 --lr 6e-4 --optimizer ADAM --random_erasing --feats 512 --save '' --if_labelsmooth --w_cosine_annealing
+python [path to repo]/main.py --datadir [path to datasets] --data_train market1501 --data_test market1501 --model LMBN_n --batchid 6 --batchimage 8 --batchtest 32 --test_every 20 --epochs 130 --loss 0.5*CrossEntropy+0.5*MSLoss --margin 0.7 --nGPU 1 --lr 6e-4 --optimizer ADAM --random_erasing --feats 512 --save '' --if_labelsmooth --w_cosine_annealing
 ```
 
 Also, using pre-defined config file
@@ -71,9 +68,10 @@ Actually, for the LightMBN model we have two kinds of backbone, LMBN_r we use Re
 ### Results
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/lightweight-multi-branch-network-for-person/person-re-identification-on-cuhk03-labeled)](https://paperswithcode.com/sota/person-re-identification-on-cuhk03-labeled?p=lightweight-multi-branch-network-for-person)
 | Model | Market1501 | DukeMTMC-reID | CUHK03-D | CUHK03-L |
-| --- | -- | -- | --- | --- |
-| LightMBN(OSNet) | 96.3 (91.5) | 92.1 (83.7) | 85.4(82.6) | 87.2(85.1) |
-| LightMBN(ResNet) | 96.1 (90.5) |  90.5 (82.0) | 81.0(79.2) | 83.7(82.5) |
+| ---: | -- | -- | --- | --- |
+| LightMBN| 96.3 (91.5) | 92.1 (83.7) | 85.4 (82.6) | 87.2 (85.1) |
+| + re-rank | 96.8 (95.3) | 93.5 (90.2) | 90.2 (90.6) | 91.3 (92.2) |
+| LightMBN(ResNet) | 96.1 (90.5) |  90.5 (82.0) | 81.0 (79.2) | 83.7 (82.5) |
 | BoT | 94.2 (85.4) |  86.7 (75.8) |  |  |
 | PCB | 95.1 (86.3) |  87.6 (76.6) |  |  |
 | MGN | 94.7 (87.5) | 88.7 (79.4) |  |  |
@@ -82,6 +80,7 @@ Note, Rank-1(mAP), the results are produced by our repo **without re-ranking**, 
 
 Additionally, the evaluation metric method is the same as bag of tricks [repo](https://github.com/michuanhaohao/reid-strong-baseline/blob/master/utils/reid_metric.py).
 
+For training on cuhk03 dataset with MS Loss, the batch size of 8 x 8 would be recommended.
 
 ### Pre-trained models
 and correpondent config files can be found [here](https://1drv.ms/u/s!Ap1wlV4d0agrao4DxXe8loc_k30?e=I9PJXP) .
@@ -113,7 +112,7 @@ And also, for MGN model run
 python [path to repo]/main.py --datadir [path to datasets] --data_train Market1501 --data_test Market1501 --model MGN --batchid 16 --batchimage 4 --batchtest 32 --test_every 10 --epochs 120 --save '' --decay_type step_50_80_110 --loss 0.5*CrossEntropy+0.5*Triplet --margin 1.2 --nGPU 1 --lr 2e-4 --optimizer ADAM --random_erasing --warmup 'linear' --if_labelsmooth
 ```
 
-###Resume Training
+### Resume Training
 
 If you want to resume training process, we assume you have the checkpoint file 'model-latest.pth', run
 ```
@@ -121,7 +120,7 @@ python [path to repo]/main.py --config [path to repo]/lmbn_config.yaml --load [p
 ```
 Of course, you can also set options individually using argparse command-line without config file.
 
-## Easy Inplementation
+## Easy Inplementation  [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/14aRebdOqJSfNlwXiI5USOQBgweckUwLS)
 Our code can be inplemented easily online without install any package or requirement even GPU in your own computer thanks to Google Colab, all the packages we need are Colab standard pre-installed packages.
 
 Open this [notebook](https://colab.research.google.com/drive/14aRebdOqJSfNlwXiI5USOQBgweckUwLS), following the steps there and you can see the training process and results.
@@ -143,7 +142,7 @@ If you are hard-core player ^ ^ and you'd like to try different models or option
 
 '--datadir', type=str, is the dataset root, which contains folder Market-1501, DukeMTMC-ReID etw..
 
-'--data_train' and '--data_test', type=str, specify the name of train/test dataset, which we can train on one dataset but test on another dataset, supported options: market1501, dukemtmc, MOT17, cuhk03_spilited(767/700 protocol).
+'--data_train' and '--data_test', type=str, specify the name of train/test dataset, which we can train on single or multiple datasets but test on another datasets, supported options: market1501, dukemtmc, MOT17, cuhk03_spilited(767/700 protocol) or e.g. market1501+dukemtmc.
 
 '--batchid 6' and '--batchimage 8': type=int, indicate that each batch contrains 6 persons, each person has 8 different images, totally 48 images.
 
@@ -214,4 +213,4 @@ If you are hard-core player ^ ^ and you'd like to try different models or option
 '--num_anchors', type=int, default=1, number of iterations of computing group loss.
 
 ### Acknowledgments
-The codes was built on the top of  [deep-person-reid](https://github.com/KaiyangZhou/deep-person-reid) and [MGN-pytorch](https://github.com/seathiefwang/MGN-pytorch) , We thank the authors for sharing their code publicly.
+The codes was built on the top of  [deep-person-reid](https://github.com/KaiyangZhou/deep-person-reid) and [reid-strong-baseline](https://github.com/michuanhaohao/reid-strong-baseline) and [MGN-pytorch](https://github.com/seathiefwang/MGN-pytorch) , we thank the authors for sharing their code publicly.

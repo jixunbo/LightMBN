@@ -314,7 +314,7 @@ def re_ranking_gpu(probFea, galFea, k1, k2, lambda_value):
     del jaccard_dist
 
     final_dist = final_dist[:query_num, query_num:]
-    print(final_dist)
+    # print(final_dist)
     print('Using totally {:.2f}S to compute final_distance'.format(
         time.time() - t1))
     return final_dist

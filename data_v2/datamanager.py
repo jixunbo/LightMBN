@@ -133,8 +133,8 @@ class ImageDataManager(DataManager):
     def __init__(self, args):
 
         root = args.datadir
-        sources = args.data_train.lower()
-        targets = args.data_test.lower()
+        sources = args.data_train.lower().split('+')
+        targets = args.data_test.lower().split('+')
         height = args.height
         width = args.width
         transforms = ['random_flip', 
