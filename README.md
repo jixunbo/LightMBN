@@ -212,5 +212,22 @@ If you are hard-core player ^ ^ and you'd like to try different models or option
 
 '--num_anchors', type=int, default=1, number of iterations of computing group loss.
 
-### Acknowledgments
+## Acknowledgments
 The codes was built on the top of  [deep-person-reid](https://github.com/KaiyangZhou/deep-person-reid) and [reid-strong-baseline](https://github.com/michuanhaohao/reid-strong-baseline) and [MGN-pytorch](https://github.com/seathiefwang/MGN-pytorch) , we thank the authors for sharing their code publicly.
+
+## Reference
+
+If you want to cite LightMBN, please use the following BibTex:
+
+```
+@INPROCEEDINGS{9506733,
+  author={Herzog, Fabian and Ji, Xunbo and Teepe, Torben and Hörmann, Stefan and Gilg, Johannes and Rigoll, Gerhard},
+  booktitle={2021 IEEE International Conference on Image Processing (ICIP)}, 
+  title={Lightweight Multi-Branch Network For Person Re-Identification}, 
+  year={2021},
+  volume={},
+  number={},
+  pages={1129-1133},
+  doi={10.1109/ICIP42928.2021.9506733}}
+```
+
