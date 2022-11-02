@@ -41,7 +41,13 @@ git clone https://github.com/jixunbo/ReIDataset.git
 ```
 to download Market-1501, DukeMTMC, CUHK03 and MOT17.
 
-To inplement our Lightweight Multi-Branch Network with Multi-Similarity loss, run
+Create a virtual environment and install torch and torchvision. Then, install the remaining requirements:
+
+```
+pip install -r requirements.txt
+```
+
+To implement our Lightweight Multi-Branch Network with Multi-Similarity loss, run
 
 ```
 python [path to repo]/main.py --datadir [path to datasets] --data_train market1501 --data_test market1501 --model LMBN_n --batchid 6 --batchimage 8 --batchtest 32 --test_every 20 --epochs 130 --loss 0.5*CrossEntropy+0.5*MSLoss --margin 0.7 --nGPU 1 --lr 6e-4 --optimizer ADAM --random_erasing --feats 512 --save '' --if_labelsmooth --w_cosine_annealing
@@ -120,8 +126,8 @@ python [path to repo]/main.py --config [path to repo]/lmbn_config.yaml --load [p
 ```
 Of course, you can also set options individually using argparse command-line without config file.
 
-## Easy Inplementation  [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/14aRebdOqJSfNlwXiI5USOQBgweckUwLS)
-Our code can be inplemented easily online without install any package or requirement even GPU in your own computer thanks to Google Colab, all the packages we need are Colab standard pre-installed packages.
+## Easy Implementation  [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/14aRebdOqJSfNlwXiI5USOQBgweckUwLS)
+Our code can be implemented easily online without installing any package or requirement even GPU in your own computer thanks to Google Colab, all the packages we need are Colab standard pre-installed packages.
 
 Open this [notebook](https://colab.research.google.com/drive/14aRebdOqJSfNlwXiI5USOQBgweckUwLS), following the steps there and you can see the training process and results.
 
