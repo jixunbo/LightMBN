@@ -11,19 +11,12 @@ parser.add_argument('--nGPU', type=int, default=1, help='number of GPUs')
 parser.add_argument("--config", type=str, default="", help='config path')
 
 
-
-
-
 parser.add_argument("--datadir", type=str,
                     default="Market-1501-v15.09.15", help='dataset directory root')
 parser.add_argument('--data_train', type=str,
                     default='Market1501', help='train dataset name')
 parser.add_argument('--data_test', type=str,
                     default='Market1501', help='test dataset name')
-
-
-
-
 parser.add_argument('--cuhk03_labeled', action='store_true',
                     help='if raise, use cuhk03-labeled dataset, otherwise cuhk03-detected dataset')
 parser.add_argument("--epochs", type=int, default=80,

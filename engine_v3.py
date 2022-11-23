@@ -41,13 +41,14 @@ class Engine():
         self.model.train()
 
         for batch, d in enumerate(self.train_loader):
-            inputs, labels = self._parse_data_for_train(d)
+            inputs, labels = self._parse_data_for_train(d) # get inputs = d[0] and labels = d[1]
 
             inputs = inputs.to(self.device)
             labels = labels.to(self.device)
 
             self.optimizer.zero_grad()
-            outputs = self.model(inputs)
+            outputs = self.model(inputs) #input: torch.Size([16, 3, 384, 128])
+                                         # outputs[0][-1].size(): torch.Size([16, 202])
             loss = self.loss.compute(outputs, labels)
 
             loss.backward()
