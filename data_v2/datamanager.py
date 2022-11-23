@@ -153,6 +153,7 @@ class ImageDataManager(DataManager):
         cuhk03_labeled = args.cuhk03_labeled
         cuhk03_classic_split = False
         market1501_500k = False
+        veri = False
 
         if args.random_erasing:
             transforms.append('random_erase')
@@ -176,7 +177,7 @@ class ImageDataManager(DataManager):
                 split_id=split_id,
                 cuhk03_labeled=cuhk03_labeled,
                 cuhk03_classic_split=cuhk03_classic_split,
-                market1501_500k=market1501_500k
+                veri=veri
             )
             trainset.append(trainset_)
         trainset = sum(trainset)
@@ -218,7 +219,7 @@ class ImageDataManager(DataManager):
                 split_id=split_id,
                 cuhk03_labeled=cuhk03_labeled,
                 cuhk03_classic_split=cuhk03_classic_split,
-                market1501_500k=market1501_500k
+                veri=veri
             )
             # self.testloader[name]['query'] = torch.utils.data.DataLoader(
             self.testloader[name]['query'] = DataloaderX(
@@ -241,7 +242,7 @@ class ImageDataManager(DataManager):
                 split_id=split_id,
                 cuhk03_labeled=cuhk03_labeled,
                 cuhk03_classic_split=cuhk03_classic_split,
-                market1501_500k=market1501_500k
+                veri=veri
             )
             # self.testloader[name]['gallery'] = torch.utils.data.DataLoader(
             self.testloader[name]['gallery'] = DataloaderX(

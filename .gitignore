@@ -5,6 +5,9 @@ __pycache__/
 
 # C extensions
 *.so
+# datasets pic
+datasets/
+
 
 # jixunbo
 "Icon\r"
