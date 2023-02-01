@@ -18,7 +18,7 @@ class LMBN_n(nn.Module):
 
         osnet = osnet_x1_0(pretrained=True)
 
-        self.backone = nn.Sequential(
+        self.backbone = nn.Sequential(
             osnet.conv1,
             osnet.maxpool,
             osnet.conv2,
@@ -72,7 +72,7 @@ class LMBN_n(nn.Module):
         # if self.batch_drop_block is not None:
         #     x = self.batch_drop_block(x)
 
-        x = self.backone(x)
+        x = self.backbone(x) # x: torch.Size([1, 384, 27, 27])
 
         glo = self.global_branch(x)
         par = self.partial_branch(x)
