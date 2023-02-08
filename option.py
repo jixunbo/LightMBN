@@ -140,13 +140,15 @@ parser.add_argument('--rot_deg',type=int,default=30 , help='gives the angel/deg 
 # Cybercore AI
 parser.add_argument('--MALW_active', type=int,
                     default=0, help='if MALW_active = 1 then MALW loss will be used')
-parser.add_argument('--ID_LOSS_WEIGHT', type=int, # ID_LOSS_WEIGHT
+parser.add_argument('--ID_LOSS_WEIGHT', type=float, # ID_LOSS_WEIGHT
                     default=1.0, help='start loss weigth for MALW')
-parser.add_argument('--METRIC_LOSS_WEIGHT', type=int,
+parser.add_argument('--METRIC_LOSS_WEIGHT', type=float,
                     default=1.0, help='start loss weigth for MALW')
 parser.add_argument('--METRIC_LOSS_TYPE_MALW', type=str,
                     default='Triplet', help='Loss Type for MALW')  #Contrastive
 # --METRIC_LOSS_TYPE_MALW contrastive
+parser.add_argument('--MALW_update_iter', type=int,
+                    default=500, help='Iteration when to update weighted loss ID_LOSS_WEIGHT')
 #parser.add_argument('--IF_LABELSMOOTH', type=str,
 #                   default='on', help='Loss Type for MALW')
 

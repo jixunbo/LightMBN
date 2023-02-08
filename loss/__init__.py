@@ -29,7 +29,7 @@ class LossFunction():
         self.loss = []
         self.MALW = args.MALW_active
         self.count = 0
-        self.update_iter_interval = 500
+        self.update_iter_interval = args.MALW_update_iter
         self.cross_en_loss_history = []
         self.metric_loss_history = []
         self.ckpt = ckpt
