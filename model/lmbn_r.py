@@ -80,7 +80,8 @@ class LMBN_r(nn.Module):
         #     print('Using batch random erasing block.')
         #     self.batch_drop_block = BatchRandomErasing()
 
-        self.batch_drop_block = BatchFeatureErase_Top(2048, Bottleneck)
+        #self.batch_drop_block = BatchFeatureErase_Top(2048, Bottleneck)
+        self.batch_drop_block = BatchFeatureErase_Top(channels_in=2048,channels_out=512, bottleneck_type=Bottleneck)
 
         self.activation_map = args.activation_map
 

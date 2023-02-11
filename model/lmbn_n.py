@@ -1,7 +1,7 @@
 import copy
 import torch
 from torch import nn
-from .osnet import osnet_x1_0, OSBlock
+from .osnet import osnet_x1_0, OSBlock,osnet_x1_25, osnet_x0_75, osnet_x0_5, osnet_x0_25, osnet_ibn_x1_0
 from .attention import BatchDrop, BatchFeatureErase_Top, PAM_Module, CAM_Module, SE_Module, Dual_Module
 from .bnneck import BNNeck, BNNeck3
 from torch.nn import functional as F
@@ -13,10 +13,14 @@ class LMBN_n(nn.Module):
     def __init__(self, args):
         super(LMBN_n, self).__init__()
 
-        self.n_ch = 2
-        self.chs = 512 // self.n_ch
+        self.osnet_size(args)
+        osnet = self.osnet_model
+        channels = self.channels
 
-        osnet = osnet_x1_0(pretrained=True)
+        self.n_ch = 2
+        self.chs = channels // self.n_ch
+
+        #osnet = osnet_x1_0(pretrained=True)
 
         self.backbone = nn.Sequential(
             osnet.conv1,
@@ -40,7 +44,7 @@ class LMBN_n(nn.Module):
         self.partial_pooling = nn.AdaptiveAvgPool2d((2, 1))
         self.channel_pooling = nn.AdaptiveAvgPool2d((1, 1))
 
-        reduction = BNNeck3(512, args.num_classes,
+        reduction = BNNeck3(channels, args.num_classes,
                             args.feats, return_f=True)
 
         self.reduction_0 = copy.deepcopy(reduction)
@@ -64,7 +68,7 @@ class LMBN_n(nn.Module):
         # print('Using batch drop block.')
         # self.batch_drop_block = BatchDrop(
         #     h_ratio=args.h_ratio, w_ratio=args.w_ratio)
-        self.batch_drop_block = BatchFeatureErase_Top(512, OSBlock)
+        self.batch_drop_block = BatchFeatureErase_Top(channels_in=channels,channels_out=channels, bottleneck_type=OSBlock)
 
         self.activation_map = args.activation_map
 
@@ -144,6 +148,29 @@ class LMBN_n(nn.Module):
             if m.affine:
                 nn.init.constant_(m.weight, 1.0)
                 nn.init.constant_(m.bias, 0.0)
+
+    def osnet_size(self, args):
+        if args.osnet_size.lower() == 'osnet_x1_0':
+            self.osnet_model = osnet_x1_0(pretrained=True)
+            self.channels = 512
+        if args.osnet_size.lower() == 'osnet_x1_25':
+            self.osnet_model = osnet_x1_25(pretrained=True)
+            self.channels = 640
+        if args.osnet_size.lower() == 'osnet_x0_75':
+            self.osnet_model = osnet_x0_75(pretrained=True)
+            self.channels = 384
+        if args.osnet_size.lower() == 'osnet_x0_5':
+            self.osnet_model = osnet_x0_5(pretrained=True)
+            self.channels = 256
+        if args.osnet_size.lower() == 'osnet_x0_25':
+            self.osnet_model = osnet_x0_25(pretrained=True)
+            self.channels = 128
+        if args.osnet_size.lower() == 'osnet_x1_0':
+            self.osnet_model = osnet_ibn_x1_0(pretrained=True)
+            self.channels = 512
+        else:
+            self.osnet_model = osnet_x1_0(pretrained=True)
+            self.channels = 512
 
 
 if __name__ == '__main__':

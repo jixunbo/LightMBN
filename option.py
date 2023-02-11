@@ -121,6 +121,14 @@ parser.add_argument('--nep_id', type=str,
 parser.add_argument('--nep_name', type=str,
                     default='x.ji/mcmp', help='neptune_project_name')
 
+
+parser.add_argument('--osnet_size', type=str,
+                    default='osnet_x1_0', help='which Osnet Size there is x1.25, x1.0, x0.75, x0.5, x0.25 and ibn_x1.0')
+# x1.25 = osnet_x1_25
+# x0.25 = osnet_x0_25
+# ibn_x1.0 = osnet_ibn_x1_0
+
+
 parser.add_argument('--reset', action='store_true', help='reset the training')
 
 parser.add_argument('--transforms',type=str,default= 'random_flip+random_crop' , help='reset the training')

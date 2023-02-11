@@ -124,10 +124,10 @@ class BatchFeatureErase_Top(nn.Module):
 
     """
 
-    def __init__(self, channels, bottleneck_type, h_ratio=0.33, w_ratio=1., double_bottleneck=False):
+    def __init__(self, channels_in,channels_out, bottleneck_type, h_ratio=0.33, w_ratio=1., double_bottleneck=False):
         super(BatchFeatureErase_Top, self).__init__()
 
-        self.drop_batch_bottleneck = bottleneck_type(channels, 512)
+        self.drop_batch_bottleneck = bottleneck_type(channels_in, channels_out)
 
         self.drop_batch_drop_basic = BatchDrop(h_ratio, w_ratio)
         self.drop_batch_drop_top = BatchDropTop(h_ratio)
