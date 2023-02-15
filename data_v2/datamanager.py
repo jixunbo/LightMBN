@@ -37,7 +37,7 @@ class DataManager(object):
     """
 
     def __init__(self, sources=None, targets=None, height=256, width=128, transforms='random_flip',
-                 norm_mean=None, norm_std=None, use_gpu=False, rot=(0,180)):
+                 norm_mean=None, norm_std=None, use_gpu=False, rot=(0,30)):
         self.sources = sources
         self.targets = targets
         self.height = height
@@ -157,6 +157,7 @@ class ImageDataManager(DataManager):
         cuhk03_classic_split = False
         market1501_500k = False
         veri = False
+        AICity20 = False
 
         if args.random_erasing:
             transforms.append('random_erase')
@@ -181,7 +182,8 @@ class ImageDataManager(DataManager):
                 split_id=split_id,
                 cuhk03_labeled=cuhk03_labeled,
                 cuhk03_classic_split=cuhk03_classic_split,
-                veri=veri
+                veri=veri,
+                AICity20=AICity20
             )
             trainset.append(trainset_)
         trainset = sum(trainset)
@@ -223,7 +225,8 @@ class ImageDataManager(DataManager):
                 split_id=split_id,
                 cuhk03_labeled=cuhk03_labeled,
                 cuhk03_classic_split=cuhk03_classic_split,
-                veri=veri
+                veri=veri,
+                AICity20 = AICity20
             )
             # self.testloader[name]['query'] = torch.utils.data.DataLoader(
             self.testloader[name]['query'] = DataloaderX(
@@ -246,7 +249,8 @@ class ImageDataManager(DataManager):
                 split_id=split_id,
                 cuhk03_labeled=cuhk03_labeled,
                 cuhk03_classic_split=cuhk03_classic_split,
-                veri=veri
+                veri=veri,
+                AICity20=AICity20
             )
             # self.testloader[name]['gallery'] = torch.utils.data.DataLoader(
             self.testloader[name]['gallery'] = DataloaderX(

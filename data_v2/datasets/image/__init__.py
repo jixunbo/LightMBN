@@ -18,3 +18,4 @@ from .cuhk03_splited import CUHK03_splited
 from .msmt17 import MSMT17
 from .mot17 import MOT17
 from .veri import VeRi
+from .aicity20 import AICity20
