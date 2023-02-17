@@ -311,6 +311,10 @@ def build_transforms(height: object, width: object, transforms: object = 'random
         print('+ brightness adjustment')
         transform_tr += [ColorJitter(brightness=0.5, hue=0, contrast=0, saturation=0)]
 
+    if 'contrast_adjustment' in transforms:
+        print('+ contrast adjustment')
+        transform_tr += [ColorJitter(brightness=0, hue=0, contrast=0.5, saturation=0)]
+
     print('+ to torch tensor of range [0, 1]')
     transform_tr += [ToTensor()]
     print('+ normalization (mean={}, std={})'.format(norm_mean, norm_std))
