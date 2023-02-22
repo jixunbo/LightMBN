@@ -9,9 +9,9 @@ from torch.nn import functional as F
 from torch.autograd import Variable
 
 
-class LMBN_n_FC(nn.Module):
+class LMBN_n_fc(nn.Module):
     def __init__(self, args):
-        super(LMBN_n_FC, self).__init__()
+        super(LMBN_n_fc, self).__init__()
 
         self.osnet_size(args)
         osnet = self.osnet_model
