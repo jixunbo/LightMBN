@@ -83,7 +83,11 @@ class Engine():
             # q_q_dist = np.dot(qf, np.transpose(qf))
             # g_g_dist = np.dot(gf, np.transpose(gf))
             # dist = re_ranking(q_g_dist, q_q_dist, g_g_dist)
-            dist = re_ranking_gpu(qf, gf, 20, 6, 0.3)
+            lambda_value = self.args.re_rank_lambda_value
+            k1 = self.args.re_rank_k1
+            k2 = self.args.re_rank_k2
+
+            dist = re_ranking_gpu(qf, gf, k1, k2, lambda_value)
         else:
             # cosine distance
             dist = 1 - torch.mm(qf, gf.t()).cpu().numpy()
@@ -129,22 +133,25 @@ class Engine():
 
             f1 = outputs.data.cpu()
             # flip
-            inputs = inputs.index_select(
-                3, torch.arange(inputs.size(3) - 1, -1, -1))
-            input_img = inputs.to(self.device)
-            outputs = self.model(input_img)
-            f2 = outputs.data.cpu()
+            if self.args.test_flip == 1:
+                inputs = inputs.index_select(
+                    3, torch.arange(inputs.size(3) - 1, -1, -1))
+                input_img = inputs.to(self.device)
+                outputs = self.model(input_img)
+                f2 = outputs.data.cpu()
 
-            ff = f1 + f2
-            if ff.dim() == 3:
-                fnorm = torch.norm(
-                    ff, p=2, dim=1, keepdim=True)  # * np.sqrt(ff.shape[2])
-                ff = ff.div(fnorm.expand_as(ff))
-                ff = ff.view(ff.size(0), -1)
+                ff = f1 + f2
+                if ff.dim() == 3:
+                    fnorm = torch.norm(
+                        ff, p=2, dim=1, keepdim=True)  # * np.sqrt(ff.shape[2])
+                    ff = ff.div(fnorm.expand_as(ff))
+                    ff = ff.view(ff.size(0), -1)
 
+                else:
+                    fnorm = torch.norm(ff, p=2, dim=1, keepdim=True)
+                    ff = ff.div(fnorm.expand_as(ff))
             else:
-                fnorm = torch.norm(ff, p=2, dim=1, keepdim=True)
-                ff = ff.div(fnorm.expand_as(ff))
+                ff = f1
 
             features = torch.cat((features, ff), 0)
             pids.extend(pid)

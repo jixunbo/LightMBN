@@ -30,6 +30,9 @@ parser.add_argument("--batchtest", type=int, default=32,
                     help='input batch size for test')
 parser.add_argument('--test_only', action='store_true',
                     help='set this option to test the model')
+parser.add_argument('--test_flip', type=int,
+                    default=1, help='if test_flip = 1 then test data will be fliped and the mean')
+
 parser.add_argument('--sampler', type=str, default='True',
                     help='do use sampler in dataloader')
 
@@ -100,6 +103,10 @@ parser.add_argument('--parts', type=int, default=6, help='parts of PCB model')
 parser.add_argument("--margin", type=float, default=1.2, help='')
 parser.add_argument("--re_rank", action='store_true',
                     help='if raise, use re-ranking')
+parser.add_argument("--re_rank_lambda_value", type=float, default=0.5, help='')
+parser.add_argument("--re_rank_k1", type=float, default=50, help='')
+parser.add_argument("--re_rank_k2", type=float, default=15, help='')
+
 parser.add_argument("--cutout", action='store_true',
                     help='if raise, use cutout augmentation')
 
