@@ -104,8 +104,8 @@ parser.add_argument("--margin", type=float, default=1.2, help='')
 parser.add_argument("--re_rank", action='store_true',
                     help='if raise, use re-ranking')
 parser.add_argument("--re_rank_lambda_value", type=float, default=0.5, help='')
-parser.add_argument("--re_rank_k1", type=float, default=50, help='')
-parser.add_argument("--re_rank_k2", type=float, default=15, help='')
+parser.add_argument("--re_rank_k1", type=int, default=50, help='')
+parser.add_argument("--re_rank_k2", type=int, default=15, help='')
 
 parser.add_argument("--cutout", action='store_true',
                     help='if raise, use cutout augmentation')
