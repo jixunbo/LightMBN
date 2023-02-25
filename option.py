@@ -38,6 +38,8 @@ parser.add_argument('--sampler', type=str, default='True',
 
 
 parser.add_argument('--model', default='LMBN_n', help='model name')
+parser.add_argument('--engine', default='engine_v3', help='engine')
+
 parser.add_argument('--loss', type=str, default='1*CrossEntropy+1*Triplet',
                     help='loss function configuration')
 parser.add_argument("--if_labelsmooth", action='store_true',

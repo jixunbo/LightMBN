@@ -14,6 +14,8 @@ from utils.model_complexity import compute_model_complexity
 from torch.utils.collect_env import get_pretty_env_info
 import yaml
 import torch
+from importlib import import_module
+
 
 
 torch.cuda.empty_cache()
@@ -46,7 +48,15 @@ scheduler = make_scheduler(args, optimzer, start)
 ckpt.write_log('[INFO] Model parameters: {com[0]} flops: {com[1]}'.format(com=compute_model_complexity(model, (1, 3, args.height, args.width))
                                                                           ))
 
-engine = engine_v3.Engine(args, model, optimzer,
+def get_engine(args,  model, optimzer,scheduler, loss, loader, ckpt):
+    ckpt.write_log('[INFO] Using {} as engine...'.format(args.engine))
+    module = import_module(args.engine)
+    engine = getattr(module, 'Engine')(args, model, optimzer,
+                          scheduler, loss, loader, ckpt)
+    return engine
+
+
+engine = get_engine(args, model, optimzer,
                           scheduler, loss, loader, ckpt)
 # engine = engine.Engine(args, model, loss, loader, ckpt)
 
