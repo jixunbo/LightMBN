@@ -1,7 +1,7 @@
 import copy
 import torch
 from torch import nn
-from .osnet import osnet_x1_0, OSBlock,osnet_x1_25, osnet_x0_75, osnet_x0_5, osnet_x0_25, osnet_ibn_x1_0
+from .osnet import osnet_x1_0, OSBlock, osnet_x1_25, osnet_x0_75, osnet_x0_5, osnet_x0_25, osnet_ibn_x1_0
 from .attention import BatchDrop, BatchFeatureErase_Top, PAM_Module, CAM_Module, SE_Module, Dual_Module
 from .bnneck import BNNeck, BNNeck3
 from torch.nn import functional as F
@@ -9,9 +9,9 @@ from torch.nn import functional as F
 from torch.autograd import Variable
 
 
-class LMBN_n_fc(nn.Module):
+class LMBN_p_cnn(nn.Module):
     def __init__(self, args):
-        super(LMBN_n_fc, self).__init__()
+        super(LMBN_p_cnn, self).__init__()
 
         self.osnet_size(args)
         osnet = self.osnet_model
@@ -20,7 +20,7 @@ class LMBN_n_fc(nn.Module):
         self.n_ch = 2
         self.chs = channels // self.n_ch
 
-        #osnet = osnet_x1_0(pretrained=True)
+        # osnet = osnet_x1_0(pretrained=True)
 
         self.backbone = nn.Sequential(
             osnet.conv1,
@@ -43,33 +43,6 @@ class LMBN_n_fc(nn.Module):
         self.partial_pooling = nn.AdaptiveAvgPool2d((2, 1))
         self.channel_pooling = nn.AdaptiveAvgPool2d((1, 1))
 
-        FullyConLayer = FC(channels, args.feats)
-        self.FC1 = copy.deepcopy(FullyConLayer)
-        self.FC2 = copy.deepcopy(FullyConLayer)
-        self.FC3 = copy.deepcopy(FullyConLayer)
-        self.FC4 = copy.deepcopy(FullyConLayer)
-        self.FC5 = copy.deepcopy(FullyConLayer)
-        self.FC6 =  FC(self.chs, args.feats)
-        self.FC7 =  FC(self.chs, args.feats)
-
-        reduction = BNNeck(
-            args.feats, args.num_classes, return_f=True)
-        self.reduction_0 = copy.deepcopy(reduction)
-        self.reduction_1 = copy.deepcopy(reduction)
-        self.reduction_2 = copy.deepcopy(reduction)
-        self.reduction_3 = copy.deepcopy(reduction)
-        self.reduction_4 = copy.deepcopy(reduction)
-
-
-
-        self.shared = nn.Sequential(nn.Conv2d(
-            self.chs, args.feats, 1, bias=False), nn.BatchNorm2d(args.feats), nn.ReLU(True))
-        self.weights_init_kaiming(self.shared)
-
-        self.reduction_ch_0 = BNNeck(
-            args.feats, args.num_classes, return_f=True)
-        self.reduction_ch_1 = BNNeck(
-            args.feats, args.num_classes, return_f=True)
 
         # if args.drop_block:
         #     print('Using batch random erasing block.')
@@ -77,15 +50,25 @@ class LMBN_n_fc(nn.Module):
         # print('Using batch drop block.')
         # self.batch_drop_block = BatchDrop(
         #     h_ratio=args.h_ratio, w_ratio=args.w_ratio)
-        self.batch_drop_block = BatchFeatureErase_Top(channels_in=channels,channels_out=channels, bottleneck_type=OSBlock)
+        self.batch_drop_block = BatchFeatureErase_Top(channels_in=channels, channels_out=channels,
+                                                      bottleneck_type=OSBlock)
 
         self.activation_map = args.activation_map
+
+        self.con1x1_0 = Conv1x1(channels, channels)
+        self.con1x1_1 = Conv1x1(channels, channels)
+        self.con1x1_2 = Conv1x1(channels, channels)
+        self.con1x1_3 = Conv1x1(channels, channels)
+        self.con1x1_4 = Conv1x1(channels, channels)
+        self.con1x1_5 = Conv1x1(self.chs, channels)
+        self.con1x1_6 = Conv1x1(self.chs, channels)
+
 
     def forward(self, x):
         # if self.batch_drop_block is not None:
         #     x = self.batch_drop_block(x)
 
-        x = self.backbone(x) # x: torch.Size([1, 384, 27, 27])
+        x = self.backbone(x)  # x: torch.Size([1, 384, 27, 27])
 
         glo = self.global_branch(x)
         par = self.partial_branch(x)
@@ -98,7 +81,6 @@ class LMBN_n_fc(nn.Module):
             glo_drop, glo = self.batch_drop_block(glo)
 
         if self.activation_map:
-
             _, _, h_par, _ = par.size()
 
             fmap_p0 = par[:, :, :h_par // 2, :]
@@ -118,37 +100,21 @@ class LMBN_n_fc(nn.Module):
         p0 = p_par[:, :, 0:1, :]
         p1 = p_par[:, :, 1:2, :]
 
-        glo0 = self.FC1(glo)
-        g_par0 = self.FC2(g_par)
-        p00 = self.FC3(p0)
-        p10 = self.FC4(p1)
-        glo_drop0 = self.FC5(glo_drop)
-
-        f_glo = self.reduction_0(glo0)
-        f_p0 = self.reduction_1(g_par0)
-        f_p1 = self.reduction_2(p00)
-        f_p2 = self.reduction_3(p10)
-        f_glo_drop = self.reduction_4(glo_drop0)
-
-        ################
-
         c0 = cha[:, :self.chs, :, :]
         c1 = cha[:, self.chs:, :, :]
-        c0 = self.FC6(c0)
-        c1 = self.FC7(c1)
-        f_c0 = self.reduction_ch_0(c0)
-        f_c1 = self.reduction_ch_1(c1)
 
-        ################
+        glo_drop = self.con1x1_0(glo_drop)
+        glo = self.con1x1_1(glo)
+        g_par = self.con1x1_2(g_par)
+        p0 = self.con1x1_3(p0)
+        p1 = self.con1x1_4(p1)
+        c0 = self.con1x1_5(c0)
+        c1 = self.con1x1_6(c1)
 
-        fea = [f_glo[-1], f_glo_drop[-1], f_p0[-1]]
 
-        if not self.training:
 
-            return torch.stack([f_glo[0], f_glo_drop[0], f_p0[0], f_p1[0], f_p2[0], f_c0[0], f_c1[0]], dim=2)
-            # return torch.stack([f_glo_drop[0], f_p0[0], f_p1[0], f_p2[0], f_c0[0], f_c1[0]], dim=2)
 
-        return [f_glo[1], f_glo_drop[1], f_p0[1], f_p1[1], f_p2[1], f_c0[1], f_c1[1]], fea
+        return [glo_drop, glo, g_par, p0, p1, c0, c1]
 
     def weights_init_kaiming(self, m):
         classname = m.__class__.__name__
@@ -219,17 +185,14 @@ if __name__ == '__main__':
     #     print(k.shape)
     # for k in output[1]:
     #     print(k.shape)
-class FC(nn.Module):
+
+
+class Conv1x1(nn.Module):
     def __init__(self, in_dim, out_dim):
-        super(FC, self).__init__()
+        super(Conv1x1, self).__init__()
         self.reduction = nn.Conv2d(in_dim, out_dim, 1, bias=False)
         self.bn = nn.BatchNorm1d(out_dim)
-        self.FC = nn.Linear(out_dim, out_dim, bias=False)
-        self.ac = nn.ReLU()
 
     def forward(self, x):
         x = self.reduction(x)
-        x = self.bn(x.flatten(1))
-        x = self.FC(x)
-        return self.ac(x)
-
+        return self.bn(x.flatten(1))
