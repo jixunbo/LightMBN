@@ -62,12 +62,15 @@ class Engine():
 
             self.optimizer.zero_grad()
             if (epoch < 10) or ((epoch % 10) > 2):
-
+                if batch == 0:
+                    self.ckpt.write_log('[INFO] Training CNN layer...')
                 x = self.cnn(inputs)
                 with torch.no_grad():
                     x = self.fc(x)
                 outputs = self.bnn(x)
             else:
+                if batch == 0:
+                    self.ckpt.write_log('[INFO] Training FC layer...')
                 with torch.no_grad():
                     x = self.cnn(inputs)
                 x = self.fc(x)
