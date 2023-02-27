@@ -113,7 +113,7 @@ class LMBN_n_globalmultiheads(nn.Module):
 
         glo_drop = self.global_pooling(glo_drop)
         glo = self.channel_pooling(glo)  # shape:(batchsize, 512,1,1)
-        g_par = self.global_pooling(par)  # shape:(batchsize, 512,1,1)
+        g_par = self.global_pooling(cha)  # shape:(batchsize, 512,1,1)
         #p_par = self.partial_pooling(par)  # shape:(batchsize, 512,2,1)
         cha = self.channel_pooling(cha)  # shape:(batchsize, 256,1,1)
         mul_par = self.multi_pooling(mul)
