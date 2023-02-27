@@ -89,7 +89,7 @@ class LMBN_n_globalmultiheads(nn.Module):
         x = self.backbone(x) # x: torch.Size([1, 384, 27, 27])
 
         glo = self.global_branch(x)
-        par = self.partial_branch(x)
+        #par = self.partial_branch(x)
         cha = self.channel_branch(x)
         mul = self.multiheads_branch(x)
 
@@ -114,7 +114,7 @@ class LMBN_n_globalmultiheads(nn.Module):
         glo_drop = self.global_pooling(glo_drop)
         glo = self.channel_pooling(glo)  # shape:(batchsize, 512,1,1)
         g_par = self.global_pooling(par)  # shape:(batchsize, 512,1,1)
-        p_par = self.partial_pooling(par)  # shape:(batchsize, 512,2,1)
+        #p_par = self.partial_pooling(par)  # shape:(batchsize, 512,2,1)
         cha = self.channel_pooling(cha)  # shape:(batchsize, 256,1,1)
         mul_par = self.multi_pooling(mul)
 
@@ -122,13 +122,13 @@ class LMBN_n_globalmultiheads(nn.Module):
         _,multi,_,_ = self.multihead(mul_par.flatten(1))
         f_multi = self.reduction_multi(multi)
 
-        p0 = p_par[:, :, 0:1, :]
-        p1 = p_par[:, :, 1:2, :]
+        #p0 = p_par[:, :, 0:1, :]
+        #p1 = p_par[:, :, 1:2, :]
 
         f_glo = self.reduction_0(glo)
         f_p0 = self.reduction_1(g_par)
-        f_p1 = self.reduction_2(p0)
-        f_p2 = self.reduction_3(p1)
+        #f_p1 = self.reduction_2(p0)
+        #f_p2 = self.reduction_3(p1)
         f_glo_drop = self.reduction_4(glo_drop)
 
         ################
@@ -146,10 +146,10 @@ class LMBN_n_globalmultiheads(nn.Module):
 
         if not self.training:
 
-            return torch.stack([f_glo[0], f_glo_drop[0], f_p0[0], f_p1[0], f_p2[0], f_c0[0], f_c1[0], f_multi[0]], dim=2)
+            return torch.stack([f_glo[0], f_glo_drop[0], f_p0[0], f_c0[0], f_c1[0], f_multi[0]], dim=2)
             # return torch.stack([f_glo_drop[0], f_p0[0], f_p1[0], f_p2[0], f_c0[0], f_c1[0]], dim=2)
 
-        return [f_glo[1], f_glo_drop[1], f_p0[1], f_p1[1], f_p2[1], f_c0[1], f_c1[1], f_multi[1]], fea
+        return [f_glo[1], f_glo_drop[1], f_p0[1],  f_c0[1], f_c1[1], f_multi[1]], fea
 
     def weights_init_kaiming(self, m):
         classname = m.__class__.__name__
