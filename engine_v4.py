@@ -88,25 +88,34 @@ class Engine():
         k2 = self.args.re_rank_k2
 
         dist_Rerank_flip = re_ranking_gpu(qf_flip, gf_flip, k1, k2, lambda_value)
-        dist_Rerank_wof = re_ranking_gpu(qf_wof, gf_wof, k1, k2, lambda_value)
+        #dist_Rerank_wof = re_ranking_gpu(qf_wof, gf_wof, k1, k2, lambda_value)
         dist_flip = 1 - torch.mm(qf_flip, gf_flip.t()).cpu().numpy()
-        dist_wof = 1 - torch.mm(qf_wof, gf_wof.t()).cpu().numpy()
-        for i in range(4):
+        r_flip, m_ap_flip = evaluation(dist_flip, query_ids, gallery_ids, query_cams, gallery_cams, 50)
+        #dist_wof = 1 - torch.mm(qf_wof, gf_wof.t()).cpu().numpy()
+        if m_ap_flip > 0.5:
+            lambda_value = m_ap_flip
+            dist_Rerank_flip2 = re_ranking_gpu(qf_flip, gf_flip, k1, k2, lambda_value)
+            dist = dist_Rerank_flip
+            printing = 'ReRank+Lamda=mAP '
+
+        for i in range(3):
             if i == 0:
                 dist = dist_Rerank_flip
-                printing = 'ReRank+Flip'
+                printing = 'ReRank+Lamda=0.5'
             elif i == 1:
-                dist = dist_Rerank_wof
-                printing = 'ReRank+ without Flip'
-            elif i == 2:
                 dist = dist_flip
-                printing = 'Flip'
-            elif i == 3:
-                dist = dist_wof
-                printing = 'without Flip'
+                printing = 'Normal+Distance'
+            elif i == 2:
+                dist = dist_Rerank_flip2
+                printing = 'ReRank+Lamda=mAP '
 
-            r, m_ap = evaluation(
-                dist, query_ids, gallery_ids, query_cams, gallery_cams, 50)
+
+            if not i == 1:
+                r, m_ap = evaluation(dist, query_ids, gallery_ids, query_cams, gallery_cams, 50)
+            else:
+                r = r_flip
+                m_ap = m_ap_flip
+
 
             self.ckpt.log[-1, 0] = epoch
             self.ckpt.log[-1, 1] = m_ap
