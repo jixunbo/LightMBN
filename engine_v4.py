@@ -105,7 +105,7 @@ class Engine():
             elif i == 1:
                 dist = dist_flip
                 printing = 'Normal+Distance'
-            elif i == 2:
+            elif i == 2 and m_ap_flip > 0.5:
                 dist = dist_Rerank_flip2
                 printing = 'ReRank+Lamda=mAP '
 

@@ -141,8 +141,8 @@ parser.add_argument('--osnet_size', type=str,
 parser.add_argument('--reset', action='store_true', help='reset the training')
 
 parser.add_argument('--transforms',type=str,default= 'random_flip+random_crop' , help='reset the training')
-#  random_flip+random_crop+random_patch+color_jitter+random_rotation+mirroring_vertical+brightness_adjustment
-#
+#  random_flip+random_crop+random_patch+color_jitter+random_rotation+mirroring_vertical+brightness_adjustment+random_patch
+
 parser.add_argument('--rot_deg',type=int,default=30 , help='gives the angel/deg of the possible rotaion')
 
 # parser.add_argument("--savedir", type=str, default='saved_models', help='directory name to save')
