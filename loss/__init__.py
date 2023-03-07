@@ -59,6 +59,14 @@ class LossFunction():
                     'weight': self.MATRIC_LOSS_WEIGHT,
                     'function': loss_function
                 })
+            if args.METRIC_LOSS_TYPE_MALW == 'Triplet_mine':
+                loss_function = TripletLoss_mine(args.margin)
+                self.MATRIC_LOSS_WEIGHT = float(args.METRIC_LOSS_WEIGHT)
+                self.loss.append({
+                    'type': args.METRIC_LOSS_TYPE_MALW,
+                    'weight': self.MATRIC_LOSS_WEIGHT,
+                    'function': loss_function
+                })
             elif args.METRIC_LOSS_TYPE_MALW == 'Contrastive':
                 loss_function = ContrastiveLoss(args.margin)
                 self.MATRIC_LOSS_WEIGHT = float(args.METRIC_LOSS_WEIGHT)
