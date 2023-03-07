@@ -18,6 +18,7 @@ from loss.center_loss import CenterLoss
 #from loss.build import make_loss_MALW
 from .metric_learning import ContrastiveLoss
 from .metric_learning import ContrastiveLoss, SupConLoss
+from .hard_mine_triplet_loss import TripletLoss_mine
 
 class LossFunction():
     def __init__(self, args, ckpt):
@@ -81,6 +82,9 @@ class LossFunction():
                     self.ID_LOSS_WEIGHT = float(weight)
                 elif loss_type == 'Triplet':
                     loss_function = TripletLoss(args.margin)
+                    self.MATRIC_LOSS_WEIGHT = float(weight)
+                elif loss_type == 'Triplet_mine':
+                    loss_function = TripletLoss_mine(args.margin)
                     self.MATRIC_LOSS_WEIGHT = float(weight)
                 elif loss_type == 'GroupLoss':
                     loss_function = GroupLoss(
@@ -164,7 +168,7 @@ class LossFunction():
                 self.log[-1, i] += effective_loss.item()
                 self.cross_en_loss_history.append(effective_loss.item())
 
-            elif l['type'] in ['Triplet', 'MSLoss', 'Contrastive']:
+            elif l['type'] in ['Triplet', 'MSLoss', 'Contrastive', 'Triplet_mine']:
                 if isinstance(outputs[-1], list):
                     loss = [l['function'](output, labels)
                             for output in outputs[-1]]
