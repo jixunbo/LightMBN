@@ -22,7 +22,8 @@ __image_datasets = {
     'prid': PRID,
     'cuhk02': CUHK02,
     'mot17': MOT17,
-    'veri' : VeRi
+    'veri' : VeRi,
+    'aicity20': AICity20
 }
 
 

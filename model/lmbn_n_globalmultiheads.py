@@ -5,13 +5,14 @@ from .osnet import osnet_x1_0, OSBlock,osnet_x1_25, osnet_x0_75, osnet_x0_5, osn
 from .attention import BatchDrop, BatchFeatureErase_Top, PAM_Module, CAM_Module, SE_Module, Dual_Module
 from .bnneck import BNNeck, BNNeck3
 from torch.nn import functional as F
+from .MultiHeads import MultiHeads
 
 from torch.autograd import Variable
 
 
-class LMBN_n(nn.Module):
+class LMBN_n_globalmultiheads(nn.Module):
     def __init__(self, args):
-        super(LMBN_n, self).__init__()
+        super(LMBN_n_globalmultiheads, self).__init__()
 
         self.osnet_size(args)
         osnet = self.osnet_model
@@ -40,9 +41,15 @@ class LMBN_n(nn.Module):
         self.channel_branch = nn.Sequential(copy.deepcopy(
             conv3), copy.deepcopy(osnet.conv4), copy.deepcopy(osnet.conv5))
 
+        self.multiheads_branch = nn.Sequential(copy.deepcopy(
+            conv3), copy.deepcopy(osnet.conv4), copy.deepcopy(osnet.conv5))
+
+
+
         self.global_pooling = nn.AdaptiveMaxPool2d((1, 1))
         self.partial_pooling = nn.AdaptiveAvgPool2d((2, 1))
         self.channel_pooling = nn.AdaptiveAvgPool2d((1, 1))
+        self.multi_pooling = nn.AdaptiveAvgPool2d((1,1))
 
         reduction = BNNeck3(channels, args.num_classes,
                             args.feats, return_f=True)
@@ -57,11 +64,14 @@ class LMBN_n(nn.Module):
             self.chs, args.feats, 1, bias=False), nn.BatchNorm2d(args.feats), nn.ReLU(True))
         self.weights_init_kaiming(self.shared)
 
+        self.multihead = MultiHeads(feature_dim=channels, groups=32, mode='S', backbone_fc_dim=channels)
+
         self.reduction_ch_0 = BNNeck(
             args.feats, args.num_classes, return_f=True)
         self.reduction_ch_1 = BNNeck(
             args.feats, args.num_classes, return_f=True)
-
+        self.reduction_multi = BNNeck(
+            args.feats, args.num_classes, return_f=True)
         # if args.drop_block:
         #     print('Using batch random erasing block.')
         #     self.batch_drop_block = BatchRandomErasing()
@@ -79,8 +89,9 @@ class LMBN_n(nn.Module):
         x = self.backbone(x) # x: torch.Size([1, 384, 27, 27])
 
         glo = self.global_branch(x)
-        par = self.partial_branch(x)
+        #par = self.partial_branch(x)
         cha = self.channel_branch(x)
+        mul = self.multiheads_branch(x)
 
         if self.activation_map:
             glo_ = glo
@@ -102,17 +113,22 @@ class LMBN_n(nn.Module):
 
         glo_drop = self.global_pooling(glo_drop)
         glo = self.channel_pooling(glo)  # shape:(batchsize, 512,1,1)
-        g_par = self.global_pooling(par)  # shape:(batchsize, 512,1,1)
-        p_par = self.partial_pooling(par)  # shape:(batchsize, 512,2,1)
+        g_par = self.global_pooling(cha)  # shape:(batchsize, 512,1,1)
+        #p_par = self.partial_pooling(par)  # shape:(batchsize, 512,2,1)
         cha = self.channel_pooling(cha)  # shape:(batchsize, 256,1,1)
+        mul_par = self.multi_pooling(mul)
 
-        p0 = p_par[:, :, 0:1, :]
-        p1 = p_par[:, :, 1:2, :]
+        #mul1 = self.shared_multi(mul_par)
+        _,multi,_,_ = self.multihead(mul_par.flatten(1))
+        f_multi = self.reduction_multi(multi)
+
+        #p0 = p_par[:, :, 0:1, :]
+        #p1 = p_par[:, :, 1:2, :]
 
         f_glo = self.reduction_0(glo)
         f_p0 = self.reduction_1(g_par)
-        f_p1 = self.reduction_2(p0)
-        f_p2 = self.reduction_3(p1)
+        #f_p1 = self.reduction_2(p0)
+        #f_p2 = self.reduction_3(p1)
         f_glo_drop = self.reduction_4(glo_drop)
 
         ################
@@ -130,10 +146,10 @@ class LMBN_n(nn.Module):
 
         if not self.training:
 
-            return torch.stack([f_glo[0], f_glo_drop[0], f_p0[0], f_p1[0], f_p2[0], f_c0[0], f_c1[0]], dim=2)
+            return torch.stack([f_glo[0], f_glo_drop[0], f_p0[0], f_c0[0], f_c1[0], f_multi[0]], dim=2)
             # return torch.stack([f_glo_drop[0], f_p0[0], f_p1[0], f_p2[0], f_c0[0], f_c1[0]], dim=2)
 
-        return [f_glo[1], f_glo_drop[1], f_p0[1], f_p1[1], f_p2[1], f_c0[1], f_c1[1]], fea
+        return [f_glo[1], f_glo_drop[1], f_p0[1],  f_c0[1], f_c1[1], f_multi[1]], fea
 
     def weights_init_kaiming(self, m):
         classname = m.__class__.__name__

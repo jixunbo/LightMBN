@@ -9,9 +9,9 @@ from torch.nn import functional as F
 from torch.autograd import Variable
 
 
-class LMBN_n(nn.Module):
+class LMBN_n_weighted_feat(nn.Module):
     def __init__(self, args):
-        super(LMBN_n, self).__init__()
+        super(LMBN_n_weighted_feat, self).__init__()
 
         self.osnet_size(args)
         osnet = self.osnet_model
@@ -44,8 +44,13 @@ class LMBN_n(nn.Module):
         self.partial_pooling = nn.AdaptiveAvgPool2d((2, 1))
         self.channel_pooling = nn.AdaptiveAvgPool2d((1, 1))
 
-        reduction = BNNeck3(channels, args.num_classes,
-                            args.feats, return_f=True)
+        self.num_groups = 7
+        self.bn = nn.BatchNorm2d((self.num_groups)*channels)
+        self.bn_s = nn.BatchNorm2d(channels)
+        self.GDN = GDN(channels*(self.num_groups),self.num_groups)
+
+
+        reduction = BNNeck(args.feats, args.num_classes, return_f=True)
 
         self.reduction_0 = copy.deepcopy(reduction)
         self.reduction_1 = copy.deepcopy(reduction)
@@ -53,9 +58,22 @@ class LMBN_n(nn.Module):
         self.reduction_3 = copy.deepcopy(reduction)
         self.reduction_4 = copy.deepcopy(reduction)
 
-        self.shared = nn.Sequential(nn.Conv2d(
-            self.chs, args.feats, 1, bias=False), nn.BatchNorm2d(args.feats), nn.ReLU(True))
-        self.weights_init_kaiming(self.shared)
+        shared = nn.Sequential(nn.Conv2d(
+            self.chs, args.feats, 1, bias=False), nn.BatchNorm2d(args.feats), nn.LeakyReLU(0.01,True))
+        self.weights_init_kaiming(shared)
+
+        conv1x1 = nn.Sequential(nn.Conv2d(
+            channels, args.feats, 1, bias=False), nn.BatchNorm2d(args.feats), nn.LeakyReLU(0.01,True))
+        self.weights_init_kaiming(conv1x1)
+        self.shared1 = copy.deepcopy(shared)
+        self.shared2 = copy.deepcopy(shared)
+
+        self.conv0 = copy.deepcopy(conv1x1)
+        self.conv1 = copy.deepcopy(conv1x1)
+        self.conv2 = copy.deepcopy(conv1x1)
+        self.conv3 = copy.deepcopy(conv1x1)
+        self.conv4 = copy.deepcopy(conv1x1)
+
 
         self.reduction_ch_0 = BNNeck(
             args.feats, args.num_classes, return_f=True)
@@ -100,14 +118,42 @@ class LMBN_n(nn.Module):
 
             return glo, glo_, fmap_c0, fmap_c1, fmap_p0, fmap_p1
 
+
         glo_drop = self.global_pooling(glo_drop)
         glo = self.channel_pooling(glo)  # shape:(batchsize, 512,1,1)
         g_par = self.global_pooling(par)  # shape:(batchsize, 512,1,1)
         p_par = self.partial_pooling(par)  # shape:(batchsize, 512,2,1)
         cha = self.channel_pooling(cha)  # shape:(batchsize, 256,1,1)
 
+
         p0 = p_par[:, :, 0:1, :]
         p1 = p_par[:, :, 1:2, :]
+        c0 = cha[:, :self.chs, :, :]
+        c1 = cha[:, self.chs:, :, :]
+        c0 = self.shared1(c0)
+        c1 = self.shared2(c1)
+        glo_drop    = self.conv0(glo_drop)
+        glo         = self.conv1(glo)
+        g_par       = self.conv2(g_par)
+        p0          = self.conv3(p0)
+        p1          = self.conv4(p1)
+
+
+
+        groups = (glo_drop, glo,g_par,p0, p1, c0, c1)
+        bz,_,_,_ = glo.size()
+        all_par = torch.cat(groups,1)
+        all_par = self.bn(all_par)
+        weights = self.GDN(all_par.flatten(1))
+        weights = torch.reshape(weights, (bz, self.num_groups, 1, 1))
+        i = 0
+        l = list()
+        for group in groups:
+            w = torch.reshape(weights[:,i,:,:], (bz,1,1,1))
+            group = torch.mul(w,self.bn_s(group))
+            l.append(group)
+
+        glo_drop, glo, g_par, p0, p1, c0, c1 = l
 
         f_glo = self.reduction_0(glo)
         f_p0 = self.reduction_1(g_par)
@@ -117,10 +163,6 @@ class LMBN_n(nn.Module):
 
         ################
 
-        c0 = cha[:, :self.chs, :, :]
-        c1 = cha[:, self.chs:, :, :]
-        c0 = self.shared(c0)
-        c1 = self.shared(c1)
         f_c0 = self.reduction_ch_0(c0)
         f_c1 = self.reduction_ch_1(c1)
 
@@ -204,3 +246,29 @@ if __name__ == '__main__':
     #     print(k.shape)
     # for k in output[1]:
     #     print(k.shape)
+
+
+class FC(nn.Module):
+    def __init__(self, inplanes, outplanes):
+        super(FC, self).__init__()
+        self.fc = nn.Linear(inplanes, outplanes, bias=False)
+        self.bn = nn.BatchNorm1d(outplanes)
+        self.act = nn.PReLU()
+
+    def forward(self, x):
+        x = self.fc(x)
+        return self.act(x)
+
+
+class GDN(nn.Module):
+    def __init__(self, inplanes, outplanes, intermediate_dim=256):
+        super(GDN, self).__init__()
+        self.fc1 = FC(inplanes, intermediate_dim)
+        self.fc2 = FC(intermediate_dim, outplanes)
+        self.softmax = nn.Softmax()
+
+    def forward(self, x):
+        intermediate = self.fc1(x)
+        out = self.fc2(intermediate)
+        # return intermediate, self.softmax(out)
+        return torch.softmax(out, dim=1)

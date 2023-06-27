@@ -66,7 +66,9 @@ class LMBN_n_drop_no_bnneck(nn.Module):
         # print('Using batch drop block.')
         # self.batch_drop_block = BatchDrop(
         #     h_ratio=args.h_ratio, w_ratio=args.w_ratio)
-        self.batch_drop_block = BatchFeatureErase_Top(512, OSBlock)
+        #self.batch_drop_block = BatchFeatureErase_Top(512, OSBlock)
+        self.batch_drop_block = BatchFeatureErase_Top(channels_in=512, channels_out=512,
+                                                      bottleneck_type=OSBlock)
 
         self.activation_map = args.activation_map
 

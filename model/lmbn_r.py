@@ -23,15 +23,15 @@ class LMBN_r(nn.Module):
         self.n_ch = 2
         self.chs = 2048 // self.n_ch
 
-        # resnet = resnet50_ibn_a(last_stride=1, pretrained=True)
+        resnet = resnet50_ibn_a(last_stride=1, pretrained=True)
 
         resnet = resnet50(pretrained=True)
 
         self.backone = nn.Sequential(
-            resnet.conv1,
-            resnet.bn1,
-            resnet.relu,
-            resnet.maxpool,
+            resnet.conv1,    # nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
+            resnet.bn1,      #  nn.BatchNorm2d
+            resnet.relu,     # nn.ReLU(inplace=True)
+            resnet.maxpool,  # nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
             resnet.layer1,
             resnet.layer2,
             resnet.layer3[0],
@@ -80,13 +80,15 @@ class LMBN_r(nn.Module):
         #     print('Using batch random erasing block.')
         #     self.batch_drop_block = BatchRandomErasing()
 
-        self.batch_drop_block = BatchFeatureErase_Top(2048, Bottleneck)
+        #self.batch_drop_block = BatchFeatureErase_Top(2048, Bottleneck)
+        self.batch_drop_block = BatchFeatureErase_Top(channels_in=2048,channels_out=512, bottleneck_type=Bottleneck)
 
         self.activation_map = args.activation_map
 
     def forward(self, x):
         # if self.batch_drop_block is not None:
         #     x = self.batch_drop_block(x)
+        # x = torch.Size([1, 3, 222, 222])
 
         x = self.backone(x)
 

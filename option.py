@@ -30,11 +30,16 @@ parser.add_argument("--batchtest", type=int, default=32,
                     help='input batch size for test')
 parser.add_argument('--test_only', action='store_true',
                     help='set this option to test the model')
+parser.add_argument('--test_flip', type=int,
+                    default=1, help='if test_flip = 1 then test data will be fliped and the mean')
+
 parser.add_argument('--sampler', type=str, default='True',
                     help='do use sampler in dataloader')
 
 
 parser.add_argument('--model', default='LMBN_n', help='model name')
+parser.add_argument('--engine', default='engine_v3', help='engine')
+
 parser.add_argument('--loss', type=str, default='1*CrossEntropy+1*Triplet',
                     help='loss function configuration')
 parser.add_argument("--if_labelsmooth", action='store_true',
@@ -100,6 +105,10 @@ parser.add_argument('--parts', type=int, default=6, help='parts of PCB model')
 parser.add_argument("--margin", type=float, default=1.2, help='')
 parser.add_argument("--re_rank", action='store_true',
                     help='if raise, use re-ranking')
+parser.add_argument("--re_rank_lambda_value", type=float, default=0.5, help='')
+parser.add_argument("--re_rank_k1", type=int, default=50, help='')
+parser.add_argument("--re_rank_k2", type=int, default=15, help='')
+
 parser.add_argument("--cutout", action='store_true',
                     help='if raise, use cutout augmentation')
 
@@ -121,11 +130,44 @@ parser.add_argument('--nep_id', type=str,
 parser.add_argument('--nep_name', type=str,
                     default='x.ji/mcmp', help='neptune_project_name')
 
+
+parser.add_argument('--osnet_size', type=str,
+                    default='osnet_x1_0', help='which Osnet Size there is x1.25, x1.0, x0.75, x0.5, x0.25 and ibn_x1.0')
+# x1.25 = osnet_x1_25
+# x0.25 = osnet_x0_25
+# ibn_x1.0 = osnet_ibn_x1_0
+
+
 parser.add_argument('--reset', action='store_true', help='reset the training')
+
+parser.add_argument('--transforms',type=str,default= 'random_flip+random_crop' , help='reset the training')
+#  random_flip+random_crop+random_patch+color_jitter+random_rotation+mirroring_vertical+brightness_adjustment+random_patch
+
+parser.add_argument('--rot_deg',type=int,default=30 , help='gives the angel/deg of the possible rotaion')
+
 # parser.add_argument("--savedir", type=str, default='saved_models', help='directory name to save')
 # parser.add_argument("--outdir", type=str, default='out', help='')
 # parser.add_argument("--resume", action='store_true', help='whether resume training from specific checkpoint')
 # parser.add_argument('--save_models', action='store_true', help='save all intermediate models')
+
+
+# MALW = Momentum Adaptive Loss Weight
+# from paper: A Strong Baseline for Vehicle Re-Identification
+# Su V. Huynh, Nam H. Nguyen, Ngoc T. Nguyen, Vinh TQ. Nguyen, Chau Huynh, Chuong Nguyen
+# Cybercore AI
+parser.add_argument('--MALW_active', type=int,
+                    default=0, help='if MALW_active = 1 then MALW loss will be used')
+parser.add_argument('--ID_LOSS_WEIGHT', type=float, # ID_LOSS_WEIGHT
+                    default=1.0, help='start loss weigth for MALW')
+parser.add_argument('--METRIC_LOSS_WEIGHT', type=float,
+                    default=1.0, help='start loss weigth for MALW')
+parser.add_argument('--METRIC_LOSS_TYPE_MALW', type=str,
+                    default='Triplet', help='Loss Type for MALW')  #Contrastive
+# --METRIC_LOSS_TYPE_MALW contrastive
+parser.add_argument('--MALW_update_iter', type=int,
+                    default=500, help='Iteration when to update weighted loss ID_LOSS_WEIGHT')
+#parser.add_argument('--IF_LABELSMOOTH', type=str,
+#                   default='on', help='Loss Type for MALW')
 
 
 args = parser.parse_args()

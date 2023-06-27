@@ -70,7 +70,7 @@ class VeRi(ImageDataset):
 
     def process_dir(self, dir_path, relabel=False):
         img_paths = glob.glob(osp.join(dir_path, '*.jpg'))
-        pattern = re.compile(r'([-\d]+)_c(\d)')
+        pattern = re.compile(r'([-\d]+)_c(\d\d\d)')
 
         pid_container = set()
         for img_path in img_paths:
@@ -94,3 +94,7 @@ class VeRi(ImageDataset):
             data.append((img_path, pid, camid))
 
         return data
+
+
+        # camid = camera ID
+        # pid (int): person ID

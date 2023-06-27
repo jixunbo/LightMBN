@@ -245,8 +245,8 @@ class RandomPatch(object):
         return img
 
 
-def build_transforms(height, width, transforms='random_flip', norm_mean=[0.485, 0.456, 0.406],
-                     norm_std=[0.229, 0.224, 0.225], **kwargs):
+def build_transforms(height: object, width: object, transforms: object = 'random_flip', norm_mean: object = [0.485, 0.456, 0.406],
+                     norm_std: object = [0.229, 0.224, 0.225], rot: object = (0, 180), **kwargs: object) -> object:
     """Builds train and test transform functions.
 
     Args:
@@ -283,10 +283,12 @@ def build_transforms(height, width, transforms='random_flip', norm_mean=[0.485, 
     if 'random_flip' in transforms:
         print('+ random flip')
         transform_tr += [RandomHorizontalFlip()]
+
     if 'random_crop' in transforms:
         print('+ random crop (enlarge to {}x{} and '
               'crop {}x{})'.format(int(round(height * 1.05)), int(round(width * 1.05)), height, width))
         transform_tr += [Random2DTranslation(height, width)]
+
     if 'random_patch' in transforms:
         print('+ random patch')
         transform_tr += [RandomPatch()]
@@ -295,16 +297,37 @@ def build_transforms(height, width, transforms='random_flip', norm_mean=[0.485, 
         print('+ color jitter')
         transform_tr += [ColorJitter(brightness=0.2,
                                      contrast=0.15, saturation=0, hue=0)]
+
+    if 'random_rotation' in transforms:
+        print('+ random rotation btw {} and {} deg'.format(rot[0], rot[1]))
+        transform_tr += [RandomRotation(degrees=rot)]
+
+
+    if 'mirroring_vertical' in transforms:
+        print('+ mirroring vertical')
+        transform_tr += [RandomVerticalFlip()]
+
+    if 'brightness_adjustment' in transforms:
+        print('+ brightness adjustment')
+        transform_tr += [ColorJitter(brightness=0.5, hue=0, contrast=0, saturation=0)]
+
+    if 'contrast_adjustment' in transforms:
+        print('+ contrast adjustment')
+        transform_tr += [ColorJitter(brightness=0, hue=0, contrast=0.5, saturation=0)]
+
     print('+ to torch tensor of range [0, 1]')
     transform_tr += [ToTensor()]
     print('+ normalization (mean={}, std={})'.format(norm_mean, norm_std))
     transform_tr += [normalize]
+
     if 'random_erase' in transforms:
         print('+ random erase')
         transform_tr += [RandomErasing()]
+
     if 'cutout' in transforms:
         print('+ cutout augmentation')
         transform_tr += [Cutout()]
+
     transform_tr = Compose(transform_tr)
 
     print('Building test transforms ...')
