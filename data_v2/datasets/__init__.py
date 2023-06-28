@@ -7,7 +7,7 @@ from .video import *
 
 
 __image_datasets = {
-    'market1501': Market1501,
+    #'market1501': Market1501,
     'cuhk03': CUHK03,
     'cuhk03_detected': CUHK03_Detected,
     'cuhk03_labeled': CUHK03_Labeled,
@@ -21,7 +21,9 @@ __image_datasets = {
     'sensereid': SenseReID,
     'prid': PRID,
     'cuhk02': CUHK02,
-    'mot17': MOT17
+    'mot17': MOT17,
+    'veri' : VeRi,
+    'aicity20': AICity20
 }
 
 

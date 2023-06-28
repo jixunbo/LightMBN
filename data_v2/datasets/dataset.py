@@ -114,6 +114,11 @@ class Dataset(object):
         Args:
             data (list): contains tuples of (img_path(s), pid, camid)
         """
+        if len(data[1]) >3:
+            for i in range(len(data)):
+                data[i] = data[i][:3]
+
+
         pids = set()
         cams = set()
         for _, pid, camid in data:
@@ -226,6 +231,18 @@ class Dataset(object):
 
         return msg
 
+    def get_imagedata_info(self, data):
+        pids, cams = [], []
+        for _, pid, camid,_ in data:
+            pids += [pid]
+            cams += [camid]
+        pids = set(pids)
+        cams = set(cams)
+        num_pids = len(pids)
+        num_cams = len(cams)
+        num_imgs = len(data)
+        return num_pids, num_imgs, num_cams
+
 
 class ImageDataset(Dataset):
     """A base class representing ImageDataset.
@@ -242,12 +259,36 @@ class ImageDataset(Dataset):
         super(ImageDataset, self).__init__(train, query, gallery, **kwargs)
 
     def __getitem__(self, index):
+        if len(self.data[1]) >3:
+            for i in range(len(self.data)):
+                self.data[i] = self.data[i][:3]
         img_path, pid, camid = self.data[index]
         img = read_image(img_path)
         if self.transform is not None:
             img = self.transform(img)
         return img, pid, camid, img_path
         # return img, pid
+
+    def relabel(self, lists):
+        relabeled = []
+        pid_container = set()
+        for img_path, pid, camid, domain in lists:
+            pid_container.add(pid)
+        pid2label = {pid: label for label, pid in enumerate(pid_container)}
+        for img_path, pid, camid, domain in lists:
+            pid = pid2label[pid]
+            relabeled.append([img_path, pid, camid, domain])
+        return relabeled
+
+    def _read_tracks(self, path):
+        tracks = []
+        with open(path, 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                line = line.strip()
+                track = line.split(' ')
+                tracks.append(track)
+        return tracks
 
 
     def show_summary(self):

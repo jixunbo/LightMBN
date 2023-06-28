@@ -9,44 +9,18 @@ from torch.nn import functional as F
 from torch.autograd import Variable
 
 
-class LMBN_n(nn.Module):
+class LMBN_p_bnn(nn.Module):
     def __init__(self, args):
-        super(LMBN_n, self).__init__()
+        super(LMBN_p_bnn, self).__init__()
 
         self.osnet_size(args)
-        osnet = self.osnet_model
         channels = self.channels
 
         self.n_ch = 2
         self.chs = channels // self.n_ch
 
-        #osnet = osnet_x1_0(pretrained=True)
-
-        self.backbone = nn.Sequential(
-            osnet.conv1,
-            osnet.maxpool,
-            osnet.conv2,
-            osnet.conv3[0]
-        )
-
-        conv3 = osnet.conv3[1:]
-
-        self.global_branch = nn.Sequential(copy.deepcopy(
-            conv3), copy.deepcopy(osnet.conv4), copy.deepcopy(osnet.conv5))
-
-        self.partial_branch = nn.Sequential(copy.deepcopy(
-            conv3), copy.deepcopy(osnet.conv4), copy.deepcopy(osnet.conv5))
-
-        self.channel_branch = nn.Sequential(copy.deepcopy(
-            conv3), copy.deepcopy(osnet.conv4), copy.deepcopy(osnet.conv5))
-
-        self.global_pooling = nn.AdaptiveMaxPool2d((1, 1))
-        self.partial_pooling = nn.AdaptiveAvgPool2d((2, 1))
-        self.channel_pooling = nn.AdaptiveAvgPool2d((1, 1))
-
-        reduction = BNNeck3(channels, args.num_classes,
-                            args.feats, return_f=True)
-
+        reduction = BNNeck(
+            args.feats, args.num_classes, return_f=True)
         self.reduction_0 = copy.deepcopy(reduction)
         self.reduction_1 = copy.deepcopy(reduction)
         self.reduction_2 = copy.deepcopy(reduction)
@@ -56,71 +30,23 @@ class LMBN_n(nn.Module):
         self.shared = nn.Sequential(nn.Conv2d(
             self.chs, args.feats, 1, bias=False), nn.BatchNorm2d(args.feats), nn.ReLU(True))
         self.weights_init_kaiming(self.shared)
-
         self.reduction_ch_0 = BNNeck(
             args.feats, args.num_classes, return_f=True)
         self.reduction_ch_1 = BNNeck(
             args.feats, args.num_classes, return_f=True)
 
-        # if args.drop_block:
-        #     print('Using batch random erasing block.')
-        #     self.batch_drop_block = BatchRandomErasing()
-        # print('Using batch drop block.')
-        # self.batch_drop_block = BatchDrop(
-        #     h_ratio=args.h_ratio, w_ratio=args.w_ratio)
         self.batch_drop_block = BatchFeatureErase_Top(channels_in=channels,channels_out=channels, bottleneck_type=OSBlock)
 
         self.activation_map = args.activation_map
 
     def forward(self, x):
-        # if self.batch_drop_block is not None:
-        #     x = self.batch_drop_block(x)
-
-        x = self.backbone(x) # x: torch.Size([1, 384, 27, 27])
-
-        glo = self.global_branch(x)
-        par = self.partial_branch(x)
-        cha = self.channel_branch(x)
-
-        if self.activation_map:
-            glo_ = glo
-
-        if self.batch_drop_block is not None:
-            glo_drop, glo = self.batch_drop_block(glo)
-
-        if self.activation_map:
-
-            _, _, h_par, _ = par.size()
-
-            fmap_p0 = par[:, :, :h_par // 2, :]
-            fmap_p1 = par[:, :, h_par // 2:, :]
-            fmap_c0 = cha[:, :self.chs, :, :]
-            fmap_c1 = cha[:, self.chs:, :, :]
-            print('Generating activation maps...')
-
-            return glo, glo_, fmap_c0, fmap_c1, fmap_p0, fmap_p1
-
-        glo_drop = self.global_pooling(glo_drop)
-        glo = self.channel_pooling(glo)  # shape:(batchsize, 512,1,1)
-        g_par = self.global_pooling(par)  # shape:(batchsize, 512,1,1)
-        p_par = self.partial_pooling(par)  # shape:(batchsize, 512,2,1)
-        cha = self.channel_pooling(cha)  # shape:(batchsize, 256,1,1)
-
-        p0 = p_par[:, :, 0:1, :]
-        p1 = p_par[:, :, 1:2, :]
+        [glo_drop, glo, g_par, p0, p1, c0, c1] = x
 
         f_glo = self.reduction_0(glo)
         f_p0 = self.reduction_1(g_par)
         f_p1 = self.reduction_2(p0)
         f_p2 = self.reduction_3(p1)
         f_glo_drop = self.reduction_4(glo_drop)
-
-        ################
-
-        c0 = cha[:, :self.chs, :, :]
-        c1 = cha[:, self.chs:, :, :]
-        c0 = self.shared(c0)
-        c1 = self.shared(c1)
         f_c0 = self.reduction_ch_0(c0)
         f_c1 = self.reduction_ch_1(c1)
 
@@ -151,25 +77,25 @@ class LMBN_n(nn.Module):
 
     def osnet_size(self, args):
         if args.osnet_size.lower() == 'osnet_x1_0':
-            self.osnet_model = osnet_x1_0(pretrained=True)
+
             self.channels = 512
         if args.osnet_size.lower() == 'osnet_x1_25':
-            self.osnet_model = osnet_x1_25(pretrained=True)
+
             self.channels = 640
         if args.osnet_size.lower() == 'osnet_x0_75':
-            self.osnet_model = osnet_x0_75(pretrained=True)
+
             self.channels = 384
         if args.osnet_size.lower() == 'osnet_x0_5':
-            self.osnet_model = osnet_x0_5(pretrained=True)
+
             self.channels = 256
         if args.osnet_size.lower() == 'osnet_x0_25':
-            self.osnet_model = osnet_x0_25(pretrained=True)
+
             self.channels = 128
         if args.osnet_size.lower() == 'osnet_x1_0':
-            self.osnet_model = osnet_ibn_x1_0(pretrained=True)
+
             self.channels = 512
         else:
-            self.osnet_model = osnet_x1_0(pretrained=True)
+
             self.channels = 512
 
 
@@ -204,3 +130,17 @@ if __name__ == '__main__':
     #     print(k.shape)
     # for k in output[1]:
     #     print(k.shape)
+class FC(nn.Module):
+    def __init__(self, in_dim, out_dim):
+        super(FC, self).__init__()
+        self.reduction = nn.Conv2d(in_dim, in_dim, 1, bias=False)
+        self.bn = nn.BatchNorm1d(in_dim)
+        self.FC = nn.Linear(in_dim, out_dim, bias=False)
+        self.ac = nn.ReLU()
+
+    def forward(self, x):
+        x = self.reduction(x)
+        x = self.bn(x.flatten(1))
+        x = self.FC(x)
+        return self.ac(x)
+

@@ -73,43 +73,67 @@ class Engine():
 
         with torch.no_grad():
 
-            qf, query_ids, query_cams = self.extract_feature(
+            qf_flip, qf_wof, query_ids, query_cams = self.extract_feature(
                 self.query_loader, self.args)
-            gf, gallery_ids, gallery_cams = self.extract_feature(
+            gf_flip, gf_wof, gallery_ids, gallery_cams = self.extract_feature(
                 self.test_loader, self.args)
 
-        if self.args.re_rank:
-            # q_g_dist = np.dot(qf, np.transpose(gf))
-            # q_q_dist = np.dot(qf, np.transpose(qf))
-            # g_g_dist = np.dot(gf, np.transpose(gf))
-            # dist = re_ranking(q_g_dist, q_q_dist, g_g_dist)
-            lambda_value = self.args.re_rank_lambda_value
-            k1 = self.args.re_rank_k1
-            k2 = self.args.re_rank_k2
 
-            dist = re_ranking_gpu(qf, gf, k1, k2, lambda_value)
-        else:
-            # cosine distance
-            dist = 1 - torch.mm(qf, gf.t()).cpu().numpy()
+        # q_g_dist = np.dot(qf, np.transpose(gf))
+        # q_q_dist = np.dot(qf, np.transpose(qf))
+        # g_g_dist = np.dot(gf, np.transpose(gf))
+        # dist = re_ranking(q_g_dist, q_q_dist, g_g_dist)
+        lambda_value = self.args.re_rank_lambda_value
+        k1 = self.args.re_rank_k1
+        k2 = self.args.re_rank_k2
 
-        r, m_ap = evaluation(
-            dist, query_ids, gallery_ids, query_cams, gallery_cams, 50)
+        dist_Rerank_flip = re_ranking_gpu(qf_flip, gf_flip, k1, k2, lambda_value)
+        #dist_Rerank_wof = re_ranking_gpu(qf_wof, gf_wof, k1, k2, lambda_value)
+        dist_flip = 1 - torch.mm(qf_flip, gf_flip.t()).cpu().numpy()
+        r_flip, m_ap_flip = evaluation(dist_flip, query_ids, gallery_ids, query_cams, gallery_cams, 50)
+        #dist_wof = 1 - torch.mm(qf_wof, gf_wof.t()).cpu().numpy()
+        if m_ap_flip > 0.5:
+            lambda_value = m_ap_flip
+            dist_Rerank_flip2 = re_ranking_gpu(qf_flip, gf_flip, k1, k2, lambda_value)
+            dist = dist_Rerank_flip
+            printing = 'ReRank+Lamda=mAP '
 
-        self.ckpt.log[-1, 0] = epoch
-        self.ckpt.log[-1, 1] = m_ap
-        self.ckpt.log[-1, 2] = r[0]
-        self.ckpt.log[-1, 3] = r[2]
-        self.ckpt.log[-1, 4] = r[4]
-        self.ckpt.log[-1, 5] = r[9]
-        best = self.ckpt.log.max(0)
+        for i in range(3):
+            if i == 0:
+                dist = dist_Rerank_flip
+                printing = 'ReRank+Lamda=0.5'
+            elif i == 1:
+                dist = dist_flip
+                printing = 'Normal+Distance'
+            elif i == 2 and m_ap_flip > 0.5:
+                dist = dist_Rerank_flip2
+                printing = 'ReRank+Lamda=mAP '
 
-        self.ckpt.write_log(
-            '[INFO] mAP: {:.4f} rank1: {:.4f} rank3: {:.4f} rank5: {:.4f} rank10: {:.4f} (Best: {:.4f} @epoch {})'.format(
-                m_ap,
-                r[0], r[2], r[4], r[9],
-                best[0][1], self.ckpt.log[best[1][1], 0]
-            ), refresh=True
-        )
+
+            if not i == 1:
+                r, m_ap = evaluation(dist, query_ids, gallery_ids, query_cams, gallery_cams, 50)
+            else:
+                r = r_flip
+                m_ap = m_ap_flip
+
+
+            self.ckpt.log[-1, 0] = epoch
+            self.ckpt.log[-1, 1] = m_ap
+            self.ckpt.log[-1, 2] = r[0]
+            self.ckpt.log[-1, 3] = r[2]
+            self.ckpt.log[-1, 4] = r[4]
+            self.ckpt.log[-1, 5] = r[9]
+            best = self.ckpt.log.max(0)
+
+            self.ckpt.write_log(
+                '[INFO] {} mAP: {:.4f} rank1: {:.4f} rank3: {:.4f} rank5: {:.4f} rank10: {:.4f}, {} (Best: {:.4f} @epoch {})'.format(
+                    i+1,
+                    m_ap,
+                    r[0], r[2], r[4], r[9],
+                    printing,
+                    best[0][1], self.ckpt.log[best[1][1], 0]
+                ), refresh=True
+            )
 
         if not self.args.test_only:
 
@@ -123,7 +147,8 @@ class Engine():
         return inputs.index_select(3, inv_idx)
 
     def extract_feature(self, loader, args):
-        features = torch.FloatTensor()
+        features_wof = torch.FloatTensor()
+        features_flip = torch.FloatTensor()
         pids, camids = [], []
 
         for d in loader:
@@ -133,33 +158,42 @@ class Engine():
 
             f1 = outputs.data.cpu()
             # flip
-            if self.args.test_flip == 1:
-                inputs = inputs.index_select(
-                    3, torch.arange(inputs.size(3) - 1, -1, -1))
-                input_img = inputs.to(self.device)
-                outputs = self.model(input_img)
-                f2 = outputs.data.cpu()
+            inputs = inputs.index_select(
+                3, torch.arange(inputs.size(3) - 1, -1, -1))
+            input_img = inputs.to(self.device)
+            outputs = self.model(input_img)
+            f2 = outputs.data.cpu()
 
-                ff = f1 + f2
-            else:
-                ff = f1
+            ff1 = f1 + f2
 
-            if ff.dim() == 3:
-                fnorm = torch.norm(ff, p=2, dim=1, keepdim=True)  # * np.sqrt(ff.shape[2])
-                ff = ff.div(fnorm.expand_as(ff))
-                ff = ff.view(ff.size(0), -1)
+            ff2 = f1
+            for i in range(2):
+                if i == 0:
+                    ff = ff1
+                else:
+                    ff = ff2
+                if ff.dim() == 3:
+                    fnorm = torch.norm(ff, p=2, dim=1, keepdim=True)  # * np.sqrt(ff.shape[2])
+                    ff = ff.div(fnorm.expand_as(ff))
+                    ff = ff.view(ff.size(0), -1)
 
-            else:
+                else:
+                    fnorm = torch.norm(ff, p=2, dim=1, keepdim=True)
+                    ff = ff.div(fnorm.expand_as(ff))
 
-                fnorm = torch.norm(ff, p=2, dim=1, keepdim=True)
-                ff = ff.div(fnorm.expand_as(ff))
+
+                if i == 0:
+                    features_flip = torch.cat((features_flip, ff), 0)
+
+                else:
+                    features_wof = torch.cat((features_wof, ff), 0)
 
 
-            features = torch.cat((features, ff), 0)
             pids.extend(pid)
             camids.extend(camid)
 
-        return features, np.asarray(pids), np.asarray(camids)
+
+        return features_flip, features_wof, np.asarray(pids), np.asarray(camids)
 
     def terminate(self):
         if self.args.test_only:

@@ -37,11 +37,13 @@ class DataManager(object):
     """
 
     def __init__(self, sources=None, targets=None, height=256, width=128, transforms='random_flip',
-                 norm_mean=None, norm_std=None, use_gpu=False):
+                 norm_mean=None, norm_std=None, use_gpu=False, rot=(0,30)):
         self.sources = sources
         self.targets = targets
         self.height = height
         self.width = width
+        self.rot = rot
+
 
         if self.sources is None:
             raise ValueError('sources must not be None')
@@ -55,10 +57,10 @@ class DataManager(object):
         if isinstance(self.targets, str):
             self.targets = [self.targets]
 
+
         self.transform_tr, self.transform_te = build_transforms(
             self.height, self.width, transforms=transforms,
-            norm_mean=norm_mean, norm_std=norm_std
-        )
+            norm_mean=norm_mean, norm_std=norm_std, rot=self.rot)
 
         self.use_gpu = (torch.cuda.is_available() and use_gpu)
 
@@ -137,6 +139,7 @@ class ImageDataManager(DataManager):
         targets = args.data_test.lower().split('+')
         height = args.height
         width = args.width
+        rot = (0,args.rot_deg)
         transforms = ['random_flip', 
         'random_crop'
         ]
@@ -153,6 +156,8 @@ class ImageDataManager(DataManager):
         cuhk03_labeled = args.cuhk03_labeled
         cuhk03_classic_split = False
         market1501_500k = False
+        veri = False
+        AICity20 = False
 
         if args.random_erasing:
             transforms.append('random_erase')
@@ -160,10 +165,11 @@ class ImageDataManager(DataManager):
             transforms.append('cutout')
         if args.sampler:
             train_sampler = 'RandomIdentitySampler'
+        transforms = args.transforms.lower().split('+')
 
         super(ImageDataManager, self).__init__(sources=sources, targets=targets, height=height, width=width,
                                                transforms=transforms, norm_mean=norm_mean, norm_std=norm_std,
-                                               use_gpu=use_gpu)
+                                               use_gpu=use_gpu, rot=rot)
         print('=> Loading train (source) dataset')
         trainset = []
         for name in self.sources:
@@ -176,7 +182,8 @@ class ImageDataManager(DataManager):
                 split_id=split_id,
                 cuhk03_labeled=cuhk03_labeled,
                 cuhk03_classic_split=cuhk03_classic_split,
-                market1501_500k=market1501_500k
+                veri=veri,
+                AICity20=AICity20
             )
             trainset.append(trainset_)
         trainset = sum(trainset)
@@ -218,7 +225,8 @@ class ImageDataManager(DataManager):
                 split_id=split_id,
                 cuhk03_labeled=cuhk03_labeled,
                 cuhk03_classic_split=cuhk03_classic_split,
-                market1501_500k=market1501_500k
+                veri=veri,
+                AICity20 = AICity20
             )
             # self.testloader[name]['query'] = torch.utils.data.DataLoader(
             self.testloader[name]['query'] = DataloaderX(
@@ -241,7 +249,8 @@ class ImageDataManager(DataManager):
                 split_id=split_id,
                 cuhk03_labeled=cuhk03_labeled,
                 cuhk03_classic_split=cuhk03_classic_split,
-                market1501_500k=market1501_500k
+                veri=veri,
+                AICity20=AICity20
             )
             # self.testloader[name]['gallery'] = torch.utils.data.DataLoader(
             self.testloader[name]['gallery'] = DataloaderX(
@@ -266,10 +275,12 @@ class ImageDataManager(DataManager):
         print('  # train datasets : {}'.format(len(self.sources)))
         print('  # train ids      : {}'.format(self.num_train_pids))
         print('  # train images   : {}'.format(len(trainset)))
+        print('  # batch size is  : {}'.format(batch_size_train))
         print('  # train cameras  : {}'.format(self.num_train_cams))
         print('  test             : {}'.format(self.targets))
         print('  # query images   : {}'.format(len(queryset)))
         print('  # gallery images : {}'.format(len(galleryset)))
+
 
         print('  *****************************************')
 

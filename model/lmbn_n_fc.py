@@ -9,9 +9,9 @@ from torch.nn import functional as F
 from torch.autograd import Variable
 
 
-class LMBN_n(nn.Module):
+class LMBN_n_fc(nn.Module):
     def __init__(self, args):
-        super(LMBN_n, self).__init__()
+        super(LMBN_n_fc, self).__init__()
 
         self.osnet_size(args)
         osnet = self.osnet_model
@@ -26,8 +26,7 @@ class LMBN_n(nn.Module):
             osnet.conv1,
             osnet.maxpool,
             osnet.conv2,
-            osnet.conv3[0]
-        )
+            osnet.conv3[0])
 
         conv3 = osnet.conv3[1:]
 
@@ -44,14 +43,24 @@ class LMBN_n(nn.Module):
         self.partial_pooling = nn.AdaptiveAvgPool2d((2, 1))
         self.channel_pooling = nn.AdaptiveAvgPool2d((1, 1))
 
-        reduction = BNNeck3(channels, args.num_classes,
-                            args.feats, return_f=True)
+        FullyConLayer = FC(channels, args.feats)
+        self.FC1 = copy.deepcopy(FullyConLayer)
+        self.FC2 = copy.deepcopy(FullyConLayer)
+        self.FC3 = copy.deepcopy(FullyConLayer)
+        self.FC4 = copy.deepcopy(FullyConLayer)
+        self.FC5 = copy.deepcopy(FullyConLayer)
+        self.FC6 =  FC(self.chs, args.feats)
+        self.FC7 =  FC(self.chs, args.feats)
 
+        reduction = BNNeck(
+            args.feats, args.num_classes, return_f=True)
         self.reduction_0 = copy.deepcopy(reduction)
         self.reduction_1 = copy.deepcopy(reduction)
         self.reduction_2 = copy.deepcopy(reduction)
         self.reduction_3 = copy.deepcopy(reduction)
         self.reduction_4 = copy.deepcopy(reduction)
+
+
 
         self.shared = nn.Sequential(nn.Conv2d(
             self.chs, args.feats, 1, bias=False), nn.BatchNorm2d(args.feats), nn.ReLU(True))
@@ -109,18 +118,24 @@ class LMBN_n(nn.Module):
         p0 = p_par[:, :, 0:1, :]
         p1 = p_par[:, :, 1:2, :]
 
-        f_glo = self.reduction_0(glo)
-        f_p0 = self.reduction_1(g_par)
-        f_p1 = self.reduction_2(p0)
-        f_p2 = self.reduction_3(p1)
-        f_glo_drop = self.reduction_4(glo_drop)
+        glo0 = self.FC1(glo)
+        g_par0 = self.FC2(g_par)
+        p00 = self.FC3(p0)
+        p10 = self.FC4(p1)
+        glo_drop0 = self.FC5(glo_drop)
+
+        f_glo = self.reduction_0(glo0)
+        f_p0 = self.reduction_1(g_par0)
+        f_p1 = self.reduction_2(p00)
+        f_p2 = self.reduction_3(p10)
+        f_glo_drop = self.reduction_4(glo_drop0)
 
         ################
 
         c0 = cha[:, :self.chs, :, :]
         c1 = cha[:, self.chs:, :, :]
-        c0 = self.shared(c0)
-        c1 = self.shared(c1)
+        c0 = self.FC6(c0)
+        c1 = self.FC7(c1)
         f_c0 = self.reduction_ch_0(c0)
         f_c1 = self.reduction_ch_1(c1)
 
@@ -204,3 +219,17 @@ if __name__ == '__main__':
     #     print(k.shape)
     # for k in output[1]:
     #     print(k.shape)
+class FC(nn.Module):
+    def __init__(self, in_dim, out_dim):
+        super(FC, self).__init__()
+        self.reduction = nn.Conv2d(in_dim, out_dim, 1, bias=False)
+        self.bn = nn.BatchNorm1d(out_dim)
+        self.FC = nn.Linear(out_dim, out_dim, bias=False)
+        self.ac = nn.ReLU()
+
+    def forward(self, x):
+        x = self.reduction(x)
+        x = self.bn(x.flatten(1))
+        x = self.FC(x)
+        return self.ac(x)
+

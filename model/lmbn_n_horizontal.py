@@ -9,9 +9,9 @@ from torch.nn import functional as F
 from torch.autograd import Variable
 
 
-class LMBN_n(nn.Module):
+class LMBN_n_horizontal(nn.Module):
     def __init__(self, args):
-        super(LMBN_n, self).__init__()
+        super(LMBN_n_horizontal, self).__init__()
 
         self.osnet_size(args)
         osnet = self.osnet_model
@@ -41,7 +41,7 @@ class LMBN_n(nn.Module):
             conv3), copy.deepcopy(osnet.conv4), copy.deepcopy(osnet.conv5))
 
         self.global_pooling = nn.AdaptiveMaxPool2d((1, 1))
-        self.partial_pooling = nn.AdaptiveAvgPool2d((2, 1))
+        self.partial_pooling = nn.AdaptiveAvgPool2d((1, 2))
         self.channel_pooling = nn.AdaptiveAvgPool2d((1, 1))
 
         reduction = BNNeck3(channels, args.num_classes,
@@ -106,8 +106,8 @@ class LMBN_n(nn.Module):
         p_par = self.partial_pooling(par)  # shape:(batchsize, 512,2,1)
         cha = self.channel_pooling(cha)  # shape:(batchsize, 256,1,1)
 
-        p0 = p_par[:, :, 0:1, :]
-        p1 = p_par[:, :, 1:2, :]
+        p0 = p_par[:, :, :, 0:1]
+        p1 = p_par[:, :, :, 1:2]
 
         f_glo = self.reduction_0(glo)
         f_p0 = self.reduction_1(g_par)
