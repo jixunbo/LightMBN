@@ -10,7 +10,7 @@ mypy-extensions==0.4.3
 numpy==1.22.0
 packaging==21.3
 pathspec==0.9.0
-Pillow==10.0.1
+Pillow==10.3.0
 platformdirs==2.4.1
 prefetch-generator==1.0.1
 pyaml==21.10.1
