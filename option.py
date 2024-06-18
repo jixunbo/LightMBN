@@ -127,6 +127,10 @@ parser.add_argument('--reset', action='store_true', help='reset the training')
 # parser.add_argument("--resume", action='store_true', help='whether resume training from specific checkpoint')
 # parser.add_argument('--save_models', action='store_true', help='save all intermediate models')
 
+# for wandb
+parser.add_argument('--wandb', action='store_true', help='use wandb')
+parser.add_argument('--wandb_name', type=str, default='', help='wandb project name')
+
 
 args = parser.parse_args()
 

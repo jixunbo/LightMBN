@@ -7,7 +7,7 @@ batchtest: 32
 beta1: 0.9
 beta2: 0.999
 bnneck: false
-config: ''
+config: ""
 cosine_annealing: false
 cpu: false
 cuhk03_labeled: false
@@ -15,10 +15,10 @@ cutout: false
 dampening: 0
 data_test: market1501
 data_train: market1501
-datadir: /content/ReIDataset/
+datadir: /media/CityFlow/reid/reid/
 decay_type: step_50_80_110
 drop_block: false
-epochs: 140
+epochs: 2
 epsilon: 1.0e-08
 feat_inference: after
 feats: 512
@@ -33,8 +33,8 @@ margin: 0.7
 model: LMBN_n
 momentum: 0.9
 nGPU: 1
-nThread: 4
-nep_id: ''
+nThread: 8
+nep_id: ""
 nesterov: false
 num_anchors: 1
 num_classes: 751
@@ -52,3 +52,5 @@ w_ratio: 1.0
 warmup: constant
 weight_decay: 0.0005
 width: 128
+wandb: false
+wandb_name: ""
