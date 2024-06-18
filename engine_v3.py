@@ -35,7 +35,10 @@ class Engine:
         )
 
         if args.wandb and wandb is not None:
+            self.wandb = True
             wandb.init(project=args.wandb_name)
+        else:
+            self.wandb = False
 
     def train(self):
         epoch = self.scheduler.last_epoch
@@ -73,7 +76,7 @@ class Engine:
                 end="" if batch + 1 != len(self.train_loader) else "\n",
             )
 
-            if wandb is not None:
+            if self.wandb is True and wandb is not None:
                 wandb.log(self.loss.get_loss_dict(batch))
 
         self.scheduler.step()
@@ -131,7 +134,7 @@ class Engine:
             )
             self.ckpt.plot_map_rank(epoch)
 
-        if wandb is not None:
+        if self.wandb is True and wandb is not None:
             wandb.log(
                 {
                     "mAP": m_ap,
